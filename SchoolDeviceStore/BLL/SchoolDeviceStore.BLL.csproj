@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>BLL</RootNamespace>
+    <AssemblyName>SchoolDeviceStore.BLL</AssemblyName>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DAL\SchoolDeviceStore.DAL.csproj" />
+    <ProjectReference Include="..\DTO\SchoolDeviceStore.DTO.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.118" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Data" />
+  </ItemGroup>
+</Project>

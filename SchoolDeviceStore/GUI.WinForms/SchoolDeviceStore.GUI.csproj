@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>GUI.WinForms</RootNamespace>
+    <AssemblyName>SchoolDeviceStore.GUI</AssemblyName>
+    <StartupObject>GUI.WinForms.Program</StartupObject>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BLL\SchoolDeviceStore.BLL.csproj" />
+    <ProjectReference Include="..\DTO\SchoolDeviceStore.DTO.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms.DataVisualization" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Assets\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

@@ -11,156 +11,156 @@ Dưới đây là đặc tả chi tiết về mặt chức năng, kiến trúc k
 
 Ứng dụng được thiết kế theo mô hình **3 lớp (3-Tier Architecture)** chuẩn Enterprise giúp tách biệt rõ ràng các trách nhiệm kiểm soát, nâng cao khả năng bảo trì và mở rộng:
 
-```mermaid
-graph TD
-    subgraph GUI (Presentation Layer)
-        MainForm[MainForm - Khung Giao Diện Chính]
-        LoginForm[LoginForm - Đăng Nhập Hệ Thống]
-        Pages[Thành Phần Trang - Pages: Dashboard, Sales, Products...]
-        Controls[Component UI Tùy Biến: RoundedTextBox, KpiCard...]
-    end
-    
-    subgraph BLL (Business Logic Layer)
-        AuthService[AuthService - Xác Thực]
-        SalesService[SalesService - Nghiệp Vụ Bán Hàng]
-        ProductService[ProductService - Quản Lý Sản Phẩm]
-        ReportService[ReportService - Tổng Hợp Báo Cáo]
-        BackupService[BackupService - Sao Lưu Hệ Thống]
-        ValidationHelper[ValidationHelper - Kiểm Tra Dữ Liệu]
-    end
-
-    subgraph DAL (Data Access Layer)
-        DbHelper[DbHelper - Kết Nối SQLite/SQL Server]
-        Repositories[Repositories - Lưu Trữ: ProductRepo, SalesRepo...]
-        DemoDbInit[DemoDatabaseInitializer - Khởi Tạo Database Offline]
-    end
-
-    subgraph DTO (Data Transfer Objects)
-        Entities[Entities: Product, Category, Supplier, Employee, SalesOrder...]
-    end
-
-    GUI --> BLL
-    BLL --> DAL
-    DAL --> DTO
-    GUI -.-> DTO
-```
-
 *   **Lớp Giao Diện (GUI - Presentation Layer):** Chịu trách nhiệm hiển thị dữ liệu và tiếp nhận phản hồi từ người dùng. Sử dụng các điều khiển tùy biến cao cấp (`UserControl`) để nạp động trang mà không gây nhấp nháy màn hình.
-*   **Lớp Nghiệp Vụ (BLL - Business Logic Layer):** Xử lý các quy tắc nghiệp vụ như kiểm tra tính hợp lệ của dữ liệu đầu vào, tính toán tiền thuế VAT, chiết khấu, kiểm tra hàng tồn kho trước khi tạo hóa đơn và xử lý mã hóa mật khẩu.
+*   **Lớp Nghiệp Vụ (BLL - Business Logic Layer):** Xử lý các quy tắc nghiệp vụ như kiểm tra tính hợp lệ của dữ liệu đầu vào, tính toán tiền thuế VAT, chiết khấu, kiểm tra hàng tồn kho trước khi tạo hóa đơn, xử lý mã hóa mật khẩu, và quản lý phân quyền RBAC.
 *   **Lớp Truy Xuất Dữ Liệu (DAL - Data Access Layer):** Thực hiện kết nối trực tiếp với cơ sở dữ liệu (SQLite cho chế độ chạy thử nghiệm offline và SQL Server cho môi trường Production). Sử dụng `DbHelper` với truy vấn tham số hóa (Parameterized Queries) ngăn chặn tuyệt đối lỗi bảo mật SQL Injection.
-*   **Lớp Đối Tượng Truyền Tải Dữ Liệu (DTO - Data Transfer Objects):** Chứa các lớp thực thể thuần túy ánh xạ trực tiếp 1-1 với cấu trúc bảng trong cơ sở dữ liệu (`Product`, `Category`, `Supplier`, `Employee`, `SalesOrder`, `SalesOrderDetail`, `Role`).
+*   **Lớp Đối Tượng Truyền Tải Dữ Liệu (DTO):** Chứa các lớp thực thể thuần túy ánh xạ trực tiếp 1-1 với cấu trúc bảng trong cơ sở dữ liệu (`Product`, `Category`, `Supplier`, `Employee`, `Promotion`, `SalesOrder`, `SalesOrderDetail`, `Role`).
 
 ---
 
 ## 2. Chi Tiết Các Phân Hệ Chức Năng (Functional Modules)
 
-### 2.1. Phân Hệ Xác Thực & Phân Quyền (Authentication & Authorization)
-*   **Đăng nhập hệ thống (`LoginForm`):**
-    *   Cung cấp màn hình đăng nhập bảo mật hai nửa (Split Screen):
-        *   *Nửa bên trái (Brand Panel):* Chứa hình họa trang trí hình học chuyển màu (Gradient) tinh tế, nghệ thuật và 3 thẻ giới thiệu các thế mạnh của hệ thống ("Giao diện quản trị thống nhất", "Phân quyền linh hoạt chuẩn xác", "Báo cáo thống kê thời gian thực").
-        *   *Nửa bên phải (Login Form Card):* Thẻ đăng nhập đổ bóng mềm, ô nhập liệu bo góc hiện đại, hỗ trợ tính năng ẩn/hiện mật khẩu động bằng nút checkbox và nút "Thoát ứng dụng" xác nhận an toàn.
-    *   Hỗ trợ tài khoản quản trị mặc định: Tài khoản đăng nhập demo (`admin` / `admin123`) dùng thuật toán băm mật khẩu bảo mật cao thông qua `AuthService.Authenticate`.
-*   **Phân quyền dựa trên vai trò (Role-based Authorization):**
-    *   Khi người dùng đăng nhập thành công, vai trò (`RoleId`) sẽ được lưu vào phiên làm việc.
-    *   **Quản trị viên (Admin - RoleId = 1):** Toàn quyền truy cập tất cả các tính năng trong hệ thống.
-    *   **Nhân viên & Kế toán (RoleId ≠ 1):** Hệ thống tự động ẩn đi các tính năng quản lý nhạy cảm để đảm bảo an toàn dữ liệu, bao gồm:
-        1.  *Nhà cung cấp (Suppliers)*
-        2.  *Báo cáo doanh thu & sản phẩm bán chạy (Reports)*
-        3.  *Sao lưu & khôi phục cơ sở dữ liệu (Backup/Restore)*
+### 2.1. Phân Hệ Xác Thực & Phân Quyền RBAC (Authentication & Role-Based Authorization)
 
-### 2.2. Phân Hệ Trang Chủ - Dashboard Tổng Quan (`DashboardPage`)
-*   **Các thẻ KPI phân tích trực tiếp:** Hiển thị 4 chỉ số vận hành quan trọng trong vòng 30 ngày gần nhất:
-    *   *Doanh thu (30 ngày):* Tổng số tiền bán hàng (sau chiết khấu + thuế) được định dạng tiền tệ sắc nét.
-    *   *Tổng số hóa đơn:* Tổng số đơn hàng thành công.
-    *   *Tổng sản phẩm:* Số lượng mã thiết bị hiện có trong danh mục.
-    *   *Cảnh báo sắp hết hàng:* Số lượng mặt hàng có tồn kho nguy hiểm (Số lượng $\le$ 5).
-*   **Biểu đồ xu hướng doanh thu (`Chart`):** 
-    *   Biểu đồ cột (Column Chart) trực quan hóa doanh thu hàng ngày trong 14 ngày gần nhất.
-    *   Tích hợp định dạng rút gọn nhãn trục Y thông minh (Ví dụ: `1,500,000 ₫` tự động rút gọn thành `1.5 Tr` để biểu đồ không bị rối chữ).
-*   **Danh sách cảnh báo tồn kho tối thiểu:**
-    *   Bảng hiển thị danh sách 10 sản phẩm sắp hết hàng nhất (tồn $\le$ 5) sắp xếp tăng dần để người quản lý chủ động nhập thêm thiết bị.
-*   **Danh sách hóa đơn gần đây:** 
-    *   Bảng hiển thị 10 hóa đơn lập gần nhất với đầy đủ thông tin: Mã hóa đơn, Ngày giờ lập, Tổng tiền, Giảm giá, và VAT.
-*   **Thao tác nhanh:** Các nút tắt hỗ trợ chuyển hướng trang nhanh chóng đến phân hệ Bán hàng, Sản phẩm, Báo cáo và Sao lưu dữ liệu.
+#### Đăng nhập hệ thống (`LoginForm`):
+*   Cung cấp màn hình đăng nhập bảo mật hai nửa (Split Screen).
+*   Hỗ trợ tài khoản quản trị mặc định: Tài khoản đăng nhập demo (`admin` / `admin123`) dùng thuật toán băm mật khẩu PBKDF2 bảo mật cao thông qua `AuthService.Authenticate`.
 
-### 2.3. Phân Hệ Quản Lý Sản Phẩm (Product Management)
-*   **Giao diện chia đôi màn hình (Split Panel):**
-    *   *Bên trái:* Bảng danh sách sản phẩm hiển thị các thông tin cơ bản được thiết kế phẳng đẹp mắt, hỗ trợ tô màu dòng so le (Alternate Row Color), tự động co giãn cột.
-    *   *Bên phải (Detail Preview Card):* Thẻ xem nhanh thông tin chi tiết của sản phẩm đang được chọn trên lưới (hiển thị đầy đủ thông tin giá mua, giá bán, danh mục, nhà cung cấp, trạng thái, giúp giảm tải thao tác nhấp đúp của người dùng).
-*   **Tìm kiếm & Bộ lọc nâng cao:**
-    *   Tìm kiếm tức thời (Real-time Search) khi gõ ký tự theo **Mã sản phẩm** hoặc **Tên sản phẩm**.
-    *   Lọc trạng thái kho hàng: "Tất cả", "Còn hàng" (Số lượng > 0), "Hết hàng" (Số lượng = 0).
-*   **Thao tác CRUD hoàn chỉnh:**
-    *   **Thêm & Sửa sản phẩm (`ProductEditorForm`):** Mở cửa sổ hội thoại (Dialog) thiết kế riêng để điền thông tin chi tiết: Mã sản phẩm, Tên sản phẩm, Danh mục (Combobox tải từ DB), Nhà cung cấp (Combobox tải từ DB), Số lượng, Giá nhập, Giá bán, Trạng thái (Available/Out of Stock) và mô tả chi tiết.
-    *   **Xóa sản phẩm:** Hiển thị hộp thoại cảnh báo nguy hiểm trước khi xóa thực tế để tránh thao tác nhầm lẫn từ phía người dùng.
-*   **Xuất báo cáo:** Tích hợp nút xuất nhanh toàn bộ danh sách sản phẩm hiện tại ra file định dạng CSV (`products.csv`).
+#### Hệ thống 5 vai trò phân quyền chi tiết (5-Role RBAC):
 
-### 2.4. Phân Hệ Quản Lý Danh Mục & Nhà Cung Cấp (Category & Supplier)
-*   **Quản lý danh mục thiết bị (`CategoryManagementPage`):**
-    *   Hiển thị danh sách các danh mục thiết bị trường học (Ví dụ: Thiết bị phòng thí nghiệm, Dụng cụ thể thao, Thiết bị tin học...).
-    *   Hỗ trợ thêm mới danh mục, sửa đổi thông tin hoặc xóa danh mục không còn sử dụng.
-*   **Quản lý nhà cung cấp đối tác (`SupplierManagementPage`):**
-    *   Hồ sơ chi tiết của từng nhà cung cấp bao gồm: Tên nhà cung cấp, Người liên hệ đại diện, Số điện thoại, Email và Địa chỉ văn phòng.
-    *   Quản lý danh sách đối tác cung ứng thiết bị giúp tối ưu hóa chuỗi nhập hàng.
+| RoleId | Vai trò | Tên Tiếng Việt | Mô tả nghiệp vụ |
+|--------|---------|----------------|-----------------|
+| 1 | Admin | Quản trị viên | Toàn quyền: quản lý nhân viên, cấu hình hệ thống, sao lưu/khôi phục, xem mọi báo cáo |
+| 2 | Manager | Quản lý cửa hàng | Quản lý sản phẩm, nhà cung cấp, danh mục, khuyến mãi, xem báo cáo. Không quản lý nhân viên/sao lưu |
+| 3 | Salesperson | Nhân viên bán hàng | Bán hàng, xem sản phẩm (chỉ đọc), áp dụng khuyến mãi |
+| 4 | Warehouse | Thủ kho | Quản lý sản phẩm (thêm/sửa tồn kho), quản lý nhà cung cấp, xem danh mục |
+| 5 | Accountant | Kế toán | Xem báo cáo doanh thu, xuất dữ liệu. Không bán hàng, không quản lý sản phẩm |
 
-### 2.5. Phân Hệ Bán Hàng & Lập Hóa Đơn (Sales & Invoicing - `SalesPage`)
-Đây là phân hệ nghiệp vụ cốt lõi và phức tạp nhất của ứng dụng:
-*   **Tìm kiếm thông minh Autocomplete:**
-    *   Ô tìm kiếm Khách hàng và ô tìm kiếm Sản phẩm tích hợp khả năng gợi ý danh sách tự động (`SuggestAppend`) khi người dùng bắt đầu gõ ký tự, hỗ trợ tìm nhanh theo mã, tên hoặc số điện thoại.
-*   **Kiểm tra tồn kho thời gian thực (Real-time Stock Validation):**
-    *   Khi chọn một sản phẩm, nhãn tồn kho sẽ hiển thị số lượng còn lại trong kho. Nếu sản phẩm sắp hết hàng ($\le$ 5), nhãn sẽ tự động chuyển sang màu vàng/đỏ cảnh báo.
-    *   Khi bấm **"Thêm vào giỏ"**, hệ thống kiểm tra BLL sẽ so sánh tổng số lượng yêu cầu (bao gồm cả số lượng đã nằm trong giỏ) với số lượng tồn thực tế. Nếu vượt quá, hệ thống sẽ từ chối và hiển thị thông báo lỗi để tránh tình trạng xuất âm kho.
-*   **Giỏ hàng tương tác linh hoạt:**
-    *   Lưới giỏ hàng (`_cartGrid`) hỗ trợ người dùng sửa số lượng trực tiếp trên từng ô. Hệ thống tự động kích hoạt sự kiện kiểm tra tồn kho và tính toán lại giá trị hóa đơn ngay lập tức.
-    *   Cung cấp nút **"Xóa"** nhanh tích hợp trên mỗi dòng sản phẩm và nút **"Xóa giỏ hàng"** có cảnh báo để dọn dẹp giỏ hàng nháp.
-*   **Bảng tính toán tài chính tự động (Real-time Calculator):**
-    *   Nhập giá trị chiết khấu trực tiếp (hỗ trợ giảm giá tiền mặt).
-    *   Nhập phần trăm thuế VAT (mặc định 10%).
-    *   Bộ máy tính toán tự động cập nhật:
-        $$\text{Tạm tính} = \sum (\text{Số lượng} \times \text{Đơn giá})$$
-        $$\text{Tiền thuế VAT} = (\text{Tạm tính} - \text{Giảm giá}) \times \text{VAT}\%$$
-        $$\text{Tổng cộng thanh toán} = (\text{Tạm tính} - \text{Giảm giá}) + \text{Tiền thuế VAT}$$
-*   **Chọn trạng thái thanh toán:** Tùy chọn 3 trạng thái của đơn hàng ("Đã thanh toán", "Chờ thanh toán", "Thanh toán một phần").
-*   **Quy trình ghi nhận hóa đơn an toàn:**
-    *   Khi nhấn nút **"Tạo hóa đơn"**, hệ thống sẽ thực thi một SQLite Transaction để lưu đồng thời hóa đơn vào bảng `SalesOrders`, lưu chi tiết các dòng hàng vào bảng `SalesOrderDetails` và tự động trừ số lượng tồn kho của các sản phẩm tương ứng trong bảng `Products`.
-*   **In ấn chuyên nghiệp (`InvoicePrintService`):**
-    *   Sau khi tạo hóa đơn thành công, các nút **"Xem trước"** và **"In hóa đơn"** sẽ được kích hoạt.
-    *   Hệ thống hiển thị hộp thoại xem trước tài liệu in (Print Preview) chuẩn hóa với đầy đủ thông tin: Logo cửa hàng, Tên trung tâm thiết bị, Thông tin khách hàng, Danh sách mặt hàng mua, Tổng tiền bằng chữ và phần ký tên xác nhận. Hỗ trợ xuất trực tiếp ra máy in giấy hoặc in ảo sang tệp PDF.
+#### Ma trận phân quyền chi tiết:
 
-### 2.6. Phân Hệ Thống Kê & Báo Cáo Doanh Thu (Analytics & Reporting)
-*   **Bộ lọc thời gian linh hoạt:** Lọc dữ liệu báo cáo kinh doanh theo bất kỳ khoảng thời gian nào bằng hai ô chọn ngày (`DateTimePicker`) "Từ ngày" và "Đến ngày".
-*   **Bộ chỉ số kinh doanh cốt lõi (KPIs):**
-    *   *Tổng doanh thu:* Tổng doanh số thu về trong khoảng thời gian đã chọn.
-    *   *Tổng hóa đơn:* Số lượng giao dịch thành công.
-    *   *Giá trị đơn hàng trung bình (AOV):* Bằng Tổng doanh thu chia cho Tổng số hóa đơn, giúp đánh giá hiệu quả sức mua.
-*   **Biểu đồ cột doanh thu:** Vẽ trực quan doanh thu theo các ngày trong khoảng thời gian được lọc để nhìn ra chu kỳ bán hàng cao điểm.
-*   **Hai bảng dữ liệu báo cáo chi tiết:**
-    *   *Bảng doanh thu theo ngày:* Liệt kê chi tiết số tiền bán hàng của từng ngày.
-    *   *Bảng sản phẩm bán chạy:* Liệt kê top các sản phẩm có số lượng bán nhiều nhất kèm theo tổng doanh thu mà sản phẩm đó mang lại.
-*   **Xuất file báo cáo:** Cho phép xuất dữ liệu của cả hai bảng báo cáo ra các tệp tin CSV riêng biệt (`revenue-report.csv`, `top-products.csv`) phục vụ lưu trữ hoặc phân tích sâu bằng Microsoft Excel.
+| Chức năng | Admin | Manager | Salesperson | Warehouse | Accountant |
+|-----------|-------|---------|-------------|-----------|------------|
+| Dashboard | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Bán hàng | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Sản phẩm (Xem) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Sản phẩm (CRUD) | ✅ | ✅ | ❌ | ✅ | ❌ |
+| Danh mục | ✅ | ✅ | ❌ | ✅ | ❌ |
+| Nhà cung cấp | ✅ | ✅ | ❌ | ✅ | ❌ |
+| Khuyến mãi | ✅ | ✅ | ✅ (áp dụng) | ❌ | ✅ (đọc) |
+| Báo cáo | ✅ | ✅ | ❌ | ❌ | ✅ |
+| Quản lý nhân viên | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Sao lưu/Khôi phục | ✅ | ❌ | ❌ | ❌ | ❌ |
 
-### 2.7. Phân Hệ Sao Lưu & Khôi Phục Dữ Liệu (Backup & Restore - `BackupRestorePage`)
-*   **Sao lưu cơ sở dữ liệu (Database Backup):**
-    *   Cho phép sao chép toàn bộ tệp cơ sở dữ liệu SQLite hiện hành thành một tệp sao lưu có đuôi mở rộng `.bak` tại bất kỳ đường dẫn lưu trữ nào trong máy tính (sử dụng hộp thoại `SaveFileDialog`).
-*   **Khôi phục dữ liệu (Database Restore):**
-    *   Cho phép người dùng khôi phục cơ sở dữ liệu từ một tệp sao lưu `.bak` trước đó (sử dụng `OpenFileDialog`).
-    *   Hệ thống có cơ chế cảnh báo ghi đè dữ liệu hiện tại trước khi thực hiện để đảm bảo an toàn tuyệt đối cho tệp tin đang vận hành.
+#### Dữ liệu mẫu nhân viên (8 tài khoản):
+
+| Username | Họ tên | Vai trò | Mật khẩu mẫu |
+|----------|--------|---------|---------------|
+| admin | Nguyễn Văn Admin | Admin | admin123 |
+| manager1 | Trần Thị Quản Lý | Manager | manager123 |
+| sale1 | Lê Văn Bán Hàng | Salesperson | sale123 |
+| sale2 | Phạm Thị Kinh Doanh | Salesperson | sale123 |
+| warehouse1 | Hoàng Văn Kho | Warehouse | warehouse123 |
+| kttoan1 | Ngô Thị Kế Toán | Accountant | accountant123 |
+| sale3 | Vũ Minh Đức | Salesperson | sale123 |
+| manager2 | Đỗ Anh Tuấn | Manager | manager123 |
+
+### 2.2. Phân Hệ Quản Lý Nhân Viên (`EmployeeManagementPage` - Chỉ Admin)
+*   **Bảng danh sách nhân viên:** Hiển thị Mã NV, Tên đăng nhập, Họ tên, Email, SĐT, Vai trò, Trạng thái, Ngày tạo.
+*   **Bộ lọc:** Lọc theo vai trò (5 roles) và trạng thái (Hoạt động / Đã khóa).
+*   **Thêm nhân viên:** Dialog `EmployeeEditorForm` với các trường: tên đăng nhập, họ tên, email, SĐT, vai trò, mật khẩu.
+*   **Sửa nhân viên:** Cập nhật thông tin (không đổi được username), thay đổi vai trò.
+*   **Khóa/Kích hoạt tài khoản:** Vô hiệu hóa (Deactivate) thay vì xóa. Nhân viên bị khóa không thể đăng nhập. Không thể khóa tài khoản admin chính.
+*   **Đặt lại mật khẩu:** Dialog nhập mật khẩu mới (tối thiểu 6 ký tự), hash bằng PBKDF2.
+
+### 2.3. Phân Hệ Trang Chủ - Dashboard Tổng Quan (`DashboardPage`)
+*   **Các thẻ KPI phân tích trực tiếp:** Hiển thị 4 chỉ số vận hành quan trọng trong vòng 30 ngày gần nhất.
+*   **Biểu đồ xu hướng doanh thu (`Chart`):** Biểu đồ cột trực quan hóa doanh thu hàng ngày trong 14 ngày gần nhất.
+*   **Danh sách cảnh báo tồn kho tối thiểu:** Bảng hiển thị 10 sản phẩm sắp hết hàng nhất.
+*   **Danh sách hóa đơn gần đây:** Bảng hiển thị 10 hóa đơn lập gần nhất.
+
+### 2.4. Phân Hệ Quản Lý Sản Phẩm (Product Management)
+*   **Giao diện chia đôi màn hình:** Bảng danh sách + Thẻ xem nhanh chi tiết.
+*   **Tìm kiếm & Bộ lọc nâng cao:** Real-time Search, lọc trạng thái kho hàng.
+*   **Thao tác CRUD hoàn chỉnh:** Thêm/Sửa/Xóa sản phẩm qua `ProductEditorForm`.
+*   **Xuất báo cáo:** Xuất danh sách sản phẩm ra CSV.
+
+### 2.5. Phân Hệ Quản Lý Danh Mục & Nhà Cung Cấp
+*   **Quản lý danh mục thiết bị:** 10 danh mục mẫu, CRUD đầy đủ.
+*   **Quản lý nhà cung cấp:** 5 nhà cung cấp mẫu, CRUD đầy đủ.
+
+### 2.6. Phân Hệ Khuyến Mãi (`PromotionManagementPage`)
+#### Tính năng quản lý:
+*   **Bảng danh sách khuyến mãi:** Hiển thị mã, tên, loại giảm giá, giá trị, thời gian, số lần sử dụng, trạng thái.
+*   **Bộ lọc trạng thái:** Đang hoạt động / Sắp diễn ra / Đã hết hạn / Ngừng hoạt động / Đã hết lượt.
+*   **Panel chi tiết:** Xem nhanh thông tin đầy đủ của khuyến mãi đang chọn.
+*   **CRUD:** Tạo/Sửa/Xóa chương trình khuyến mãi qua `PromotionEditorForm`.
+
+#### Loại khuyến mãi:
+*   **Phần trăm (%):** Giảm X% trên tổng đơn hàng, có giới hạn tối đa (MaxDiscountAmount).
+*   **Số tiền cố định (₫):** Giảm trực tiếp X đồng trên đơn hàng.
+
+#### Điều kiện áp dụng:
+*   **Đơn hàng tối thiểu:** Chỉ áp dụng khi subtotal >= MinOrderAmount.
+*   **Thời gian hiệu lực:** StartDate → EndDate, kiểm tra tự động.
+*   **Giới hạn sử dụng:** Số lần tối đa (hoặc không giới hạn). Tự động đếm UsageCount.
+*   **Phạm vi áp dụng:** Tất cả sản phẩm / Danh mục cụ thể / Sản phẩm cụ thể.
+
+#### Dữ liệu mẫu (5 chương trình):
+| Mã | Tên | Loại | Giá trị | Trạng thái |
+|----|-----|------|---------|-----------|
+| SUMMER2026 | Khuyến mãi Hè 2026 | % | 10% (max 5M) | Đang hoạt động |
+| BIGORDER | Ưu đãi đơn lớn | Cố định | 2,000,000 ₫ | Đang hoạt động |
+| STEM50 | Ưu đãi thiết bị STEM | % | 15% (max 3M) | Đang hoạt động |
+| WELCOME | Chào mừng khách mới | % | 5% (max 2M) | Đang hoạt động |
+| EXPIRED01 | Khuyến mãi Tết | % | 20% | Đã hết hạn |
+
+### 2.7. Phân Hệ Bán Hàng & Lập Hóa Đơn (`SalesPage`)
+*   **Tìm kiếm thông minh Autocomplete:** Gợi ý Khách hàng và Sản phẩm.
+*   **Kiểm tra tồn kho thời gian thực.**
+*   **Giỏ hàng tương tác linh hoạt.**
+*   **Bảng tính toán tài chính tự động:** Tạm tính, Giảm giá, VAT, Tổng cộng.
+*   **Tích hợp khuyến mãi:** Nhập mã khuyến mãi để áp dụng giảm giá tự động (thông qua `PromotionService`).
+*   **Quy trình ghi nhận hóa đơn an toàn:** SQLite Transaction.
+*   **In ấn chuyên nghiệp:** Print Preview chuẩn hóa.
+
+### 2.8. Phân Hệ Thống Kê & Báo Cáo Doanh Thu Nâng Cao (`ReportsPage`)
+
+#### Bộ lọc nâng cao:
+*   **Bộ lọc nhanh (Quick Filters):** Các nút "Hôm nay", "Hôm qua", "7 ngày qua", "Tháng này", "Quý này", "Năm nay".
+*   **Lọc thời gian thủ công:** DateTimePicker "Từ ngày" - "Đến ngày".
+*   **Lọc theo đối tượng:** Dropdown lọc theo Danh mục sản phẩm và Nhân viên bán hàng.
+
+#### KPI Cards với chỉ số tăng trưởng:
+*   **Tổng doanh thu:** Kèm % tăng/giảm so với kỳ trước (↑ xanh / ↓ đỏ).
+*   **Tổng số hóa đơn:** Kèm % tăng/giảm.
+*   **Giá trị đơn hàng trung bình (AOV):** Kèm % tăng/giảm.
+
+#### Biểu đồ trực quan hóa nâng cao:
+*   **Biểu đồ doanh thu:** Hỗ trợ chuyển đổi Cột / Đường / Vùng (Column/Line/Area).
+*   **So sánh kỳ trước:** Dual-series hiển thị kỳ hiện tại và kỳ trước trên cùng biểu đồ.
+*   **Biểu đồ Donut:** Cơ cấu doanh thu theo danh mục sản phẩm.
+*   **Định dạng rút gọn:** Trục Y tự động rút gọn (1,500,000 → "1.5 Tr").
+
+#### Bảng dữ liệu tương tác:
+*   **Bảng doanh thu theo ngày:** Hỗ trợ sort (click header).
+*   **Bảng sản phẩm bán chạy:** Top 10, hỗ trợ sort.
+*   **Panel cảnh báo tồn kho:** Hiển thị sản phẩm sắp hết hàng / hết hàng.
+
+#### Xuất báo cáo đa định dạng:
+*   **Xuất CSV:** Dữ liệu thuần cho phân tích.
+*   **Xuất Excel (XLS):** HTML-table format mở được bằng Excel.
+*   **Xuất PDF:** Print Preview với layout báo cáo chuyên nghiệp.
+
+### 2.9. Phân Hệ Sao Lưu & Khôi Phục (`BackupRestorePage`)
+*   **Sao lưu cơ sở dữ liệu:** Sao chép file `.bak`.
+*   **Khôi phục dữ liệu:** Khôi phục từ file `.bak` với cảnh báo ghi đè.
 
 ---
 
 ## 3. Điểm Nhấn Thiết Kế Giao Diện & Trải Nghiệm (UI/UX Highlights)
 
-Để vượt qua những hạn chế thô kệch mặc định của Windows Forms truyền thống, ứng dụng đã được áp dụng bộ nguyên tắc thiết kế **Premium Utilitarian Minimalism** (Tối giản cao cấp và thực dụng):
+Ứng dụng sử dụng bộ nguyên tắc thiết kế **Premium Utilitarian Minimalism**:
 
-*   **Bảng màu sắc tối giản & Sang trọng (Color Palette):**
-    *   *Màu thương hiệu chính (Primary Color):* Ceramic Blue (`#2563EB` - Màu xanh dương cao cấp của Tailwind) tạo cảm giác chuyên nghiệp, tin cậy.
-    *   *Nền chính:* Màu trắng tinh khiết (`#FFFFFF`) kết hợp đường viền mỏng Slate nhẹ nhàng (`#E2E8F0`) thay thế cho các màu xám Windows 98 truyền thống.
-    *   *Thanh điều hướng bên trái (Sidebar):* Warm Bone (`#F7F6F3` - màu xám ấm phong cách Notion) giúp mắt thư giãn khi vận hành thời gian dài.
-    *   *Các màu tín hiệu rõ ràng:* Xanh lục Emerald (`#10B981`) báo hiệu thành công/đủ hàng; Màu cam Amber (`#F59E0B`) cảnh báo sắp hết hàng; Màu đỏ Rose (`#EF4444`) cảnh báo lỗi/hết hàng.
-*   **Phông chữ đồng bộ (Typography):**
-    *   Sử dụng phông chữ **Segoe UI** với hệ thống phân cấp kích thước rõ ràng (từ phông nền BaseFont 9.5pt đến SectionTitleFont 13pt và TitleFont 18pt đậm nét), mang lại cảm giác chữ sắc sảo giống như các hệ thống web hiện đại sử dụng phông chữ Inter hoặc SF Pro.
-*   **Các thành phần UI Tùy biến Cao cấp (Custom Controls):**
-    *   `RoundedTextBox`: Ô nhập liệu bo tròn góc với hiệu ứng gợi ý mờ (Placeholder) và đường viền chuyển màu khi được trỏ chuột.
-    *   `KpiCardControl`: Thẻ hiển thị chỉ số có đường viền bo tròn nhẹ, có tiêu đề phụ và màu sắc nhấn tương ứng với loại dữ liệu.
-    *   `LoadingOverlayControl`: Màn che mờ hiển thị vòng xoay tải dữ liệu khi trang thực hiện các tác vụ nặng (nhập hàng, in hóa đơn), tạo phản hồi UX liên tục cho người dùng.
-    *   `EmptyStateControl`: Thay thế các bảng trống trơn đơn điệu bằng hình ảnh minh họa nhẹ nhàng và thông điệp hướng dẫn cụ thể (ví dụ: "Giỏ hàng trống - Hãy chọn sản phẩm để tiếp tục").
+*   **Bảng màu tối giản:** Ceramic Blue (`#2563EB`), nền trắng, Warm Bone sidebar.
+*   **Phông chữ Segoe UI** với hệ thống phân cấp kích thước rõ ràng.
+*   **Custom Controls:** `RoundedTextBox`, `KpiCardControl`, `LoadingOverlayControl`, `EmptyStateControl`.

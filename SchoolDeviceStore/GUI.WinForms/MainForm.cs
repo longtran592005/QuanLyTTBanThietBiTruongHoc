@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using BLL;
 using DTO;
 
 namespace GUI.WinForms
@@ -68,23 +69,29 @@ namespace GUI.WinForms
                 Padding = new Padding(16, 18, 16, 16)
             };
 
+            int roleId = _currentUser != null ? _currentUser.RoleId : 0;
+
+            // Count visible nav items to determine row count
             var layout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 10,
+                RowCount = 13,
                 BackColor = Color.Transparent
             };
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 12F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72F));  // Brand
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 12F));  // Separator
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Dashboard
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Sales
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Products
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Categories
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Suppliers
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Promotions
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Reports
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Employees
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Backup
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));  // Spacer
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));  // Logout
 
             var brand = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
             var brandTitle = new Label
@@ -107,18 +114,21 @@ namespace GUI.WinForms
             brand.Controls.Add(brandTitle);
             layout.Controls.Add(brand, 0, 0);
 
+            // Navigation buttons with permission-based visibility
             AddSidebarButton(layout, 2, "dashboard", "  Trang chủ", "\uE10F", () => LoadPage(GetDashboardPage(), "Trang chủ", "dashboard"));
             AddSidebarButton(layout, 3, "sales", "  Bán hàng", "\uE14D", () => LoadPage(GetSalesPage(), "Bán hàng", "sales"));
             AddSidebarButton(layout, 4, "products", "  Sản phẩm", "\uE14C", () => LoadPage(GetProductsPage(), "Sản phẩm", "products"));
             AddSidebarButton(layout, 5, "categories", "  Danh mục", "\uE1D3", () => LoadPage(GetCategoriesPage(), "Danh mục", "categories"));
             AddSidebarButton(layout, 6, "suppliers", "  Nhà cung cấp", "\uE13F", () => LoadPage(GetSuppliersPage(), "Nhà cung cấp", "suppliers"));
-            AddSidebarButton(layout, 7, "reports", "  Báo cáo", "\uE1D5", () => LoadPage(GetReportsPage(), "Báo cáo", "reports"));
+            AddSidebarButton(layout, 7, "promotions", "  Khuyến mãi", "\uE248", () => LoadPage(GetPromotionsPage(), "Khuyến mãi", "promotions"));
+            AddSidebarButton(layout, 8, "reports", "  Báo cáo", "\uE1D5", () => LoadPage(GetReportsPage(), "Báo cáo", "reports"));
+            AddSidebarButton(layout, 9, "employees", "  Nhân viên", "\uE13D", () => LoadPage(GetEmployeesPage(), "Quản lý nhân viên", "employees"));
 
             var backupButton = UIHelper.CreateSidebarButton("  Sao lưu / Khôi phục", "\uE114");
             backupButton.Name = "backup";
             backupButton.Tag = false;
             backupButton.Click += (s, e) => LoadPage(GetBackupPage(), "Sao lưu / Khôi phục", "backup");
-            layout.Controls.Add(backupButton, 0, 8);
+            layout.Controls.Add(backupButton, 0, 10);
             _navButtons["backup"] = backupButton;
 
             var logoutButton = UIHelper.CreateSidebarDangerButton("  Thoát hệ thống", "\uE106");
@@ -129,17 +139,36 @@ namespace GUI.WinForms
                 if (UiDialogs.Confirm("Bạn có chắc chắn muốn đăng xuất?\n\nMọi dữ liệu chưa lưu sẽ bị mất.", "Xác nhận đăng xuất"))
                     Close();
             };
-            layout.Controls.Add(logoutButton, 0, 9);
+            layout.Controls.Add(logoutButton, 0, 12);
 
-            if (_currentUser != null && _currentUser.RoleId != 1)
-            {
-                _navButtons["suppliers"].Visible = false;
-                _navButtons["backup"].Visible = false;
-                _navButtons["reports"].Visible = false;
-            }
+            // Apply role-based visibility using centralized permission check
+            ApplyRolePermissions(roleId);
 
             sidebar.Controls.Add(layout);
             return sidebar;
+        }
+
+        /// <summary>
+        /// Apply visibility to sidebar buttons based on the user's role permissions.
+        /// </summary>
+        private void ApplyRolePermissions(int roleId)
+        {
+            SetNavVisibility("sales", EmployeeService.HasPermission(roleId, "sales"));
+            SetNavVisibility("categories", EmployeeService.HasPermission(roleId, "categories"));
+            SetNavVisibility("suppliers", EmployeeService.HasPermission(roleId, "suppliers"));
+            SetNavVisibility("promotions", EmployeeService.HasPermission(roleId, "promotions"));
+            SetNavVisibility("reports", EmployeeService.HasPermission(roleId, "reports"));
+            SetNavVisibility("employees", EmployeeService.HasPermission(roleId, "employees"));
+            SetNavVisibility("backup", EmployeeService.HasPermission(roleId, "backup"));
+            // Products and Dashboard are visible to all roles
+        }
+
+        private void SetNavVisibility(string key, bool visible)
+        {
+            if (_navButtons.ContainsKey(key))
+            {
+                _navButtons[key].Visible = visible;
+            }
         }
 
         private void AddSidebarButton(TableLayoutPanel layout, int row, string key, string text, string iconChar, Action action)
@@ -265,7 +294,7 @@ namespace GUI.WinForms
                 Height = 18,
                 Font = new Font(UITheme.CaptionFont.FontFamily, 8F),
                 ForeColor = UITheme.TextSecondaryColor,
-                Text = _currentUser == null ? "Quản trị viên" : GetRoleName(_currentUser.RoleId),
+                Text = _currentUser == null ? "Quản trị viên" : EmployeeService.GetRoleDisplayName(_currentUser.RoleId),
                 TextAlign = ContentAlignment.TopRight
             };
             textPanel.Controls.Add(userRole);
@@ -322,7 +351,7 @@ namespace GUI.WinForms
                 ForeColor = UITheme.TextSecondaryColor,
                 Font = UITheme.CaptionFont,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Text = _currentUser == null ? "Vai trò: Khách" : $"Vai trò: {GetRoleName(_currentUser.RoleId)}"
+                Text = _currentUser == null ? "Vai trò: Khách" : $"Vai trò: {EmployeeService.GetRoleDisplayName(_currentUser.RoleId)}"
             };
             _clockLabel = new Label
             {
@@ -407,6 +436,16 @@ namespace GUI.WinForms
             return GetOrCreatePage("backup", () => new BackupRestorePage());
         }
 
+        private EmployeeManagementPage GetEmployeesPage()
+        {
+            return GetOrCreatePage("employees", () => new EmployeeManagementPage());
+        }
+
+        private PromotionManagementPage GetPromotionsPage()
+        {
+            return GetOrCreatePage("promotions", () => new PromotionManagementPage());
+        }
+
         private TPage GetOrCreatePage<TPage>(string key, Func<TPage> factory) where TPage : UserControl
         {
             if (_pageCache.ContainsKey(key))
@@ -438,23 +477,18 @@ namespace GUI.WinForms
                 case "suppliers":
                     LoadPage(GetSuppliersPage(), "Nhà cung cấp", "suppliers");
                     break;
+                case "promotions":
+                    LoadPage(GetPromotionsPage(), "Khuyến mãi", "promotions");
+                    break;
                 case "reports":
                     LoadPage(GetReportsPage(), "Báo cáo", "reports");
+                    break;
+                case "employees":
+                    LoadPage(GetEmployeesPage(), "Quản lý nhân viên", "employees");
                     break;
                 case "backup":
                     LoadPage(GetBackupPage(), "Sao lưu / Khôi phục", "backup");
                     break;
-            }
-        }
-
-        private static string GetRoleName(int roleId)
-        {
-            switch (roleId)
-            {
-                case 1: return "Quản trị viên";
-                case 2: return "Nhân viên";
-                case 3: return "Kế toán";
-                default: return "Nhân viên";
             }
         }
     }

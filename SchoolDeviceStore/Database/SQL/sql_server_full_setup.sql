@@ -15,6 +15,7 @@ GO
 
 -- 2. XÓA BẢNG CŨ NẾU ĐÃ TỒN TẠI (ĐỂ TRÁNH XUNG ĐỘT KHI CHẠY LẠI)
 IF OBJECT_ID('dbo.Settings', 'U') IS NOT NULL DROP TABLE dbo.Settings;
+IF OBJECT_ID('dbo.Promotions', 'U') IS NOT NULL DROP TABLE dbo.Promotions;
 IF OBJECT_ID('dbo.AuditLogs', 'U') IS NOT NULL DROP TABLE dbo.AuditLogs;
 IF OBJECT_ID('dbo.InventoryLogs', 'U') IS NOT NULL DROP TABLE dbo.InventoryLogs;
 IF OBJECT_ID('dbo.SalesOrderDetails', 'U') IS NOT NULL DROP TABLE dbo.SalesOrderDetails;
@@ -143,6 +144,7 @@ CREATE TABLE SalesOrders (
     Discount DECIMAL(18,2) DEFAULT 0,
     VAT DECIMAL(18,2) DEFAULT 0,
     TotalAmount DECIMAL(18,2) DEFAULT 0,
+    PromotionId INT NULL,
     CONSTRAINT FK_SalesOrders_Customers FOREIGN KEY(CustomerId) REFERENCES Customers(CustomerId),
     CONSTRAINT FK_SalesOrders_Employees FOREIGN KEY(CreatedBy) REFERENCES Employees(EmployeeId)
 );
@@ -186,10 +188,32 @@ CREATE TABLE Settings (
     SettingValue NVARCHAR(1000)
 );
 
--- 3.15. Thiết lập chỉ mục (Indexes) để tăng hiệu suất truy vấn
+-- 3.15. Bảng Khuyến Mãi (Promotions)
+CREATE TABLE Promotions (
+    PromotionId INT IDENTITY(1,1) PRIMARY KEY,
+    PromotionCode NVARCHAR(50) NOT NULL UNIQUE,
+    PromotionName NVARCHAR(200) NOT NULL,
+    Description NVARCHAR(500),
+    DiscountType NVARCHAR(50) NOT NULL DEFAULT 'Percentage',
+    DiscountValue DECIMAL(18,2) NOT NULL DEFAULT 0,
+    MinOrderAmount DECIMAL(18,2) DEFAULT 0,
+    MaxDiscountAmount DECIMAL(18,2) DEFAULT NULL,
+    StartDate DATETIME NOT NULL,
+    EndDate DATETIME NOT NULL,
+    UsageLimit INT DEFAULT NULL,
+    UsageCount INT DEFAULT 0,
+    IsActive BIT DEFAULT 1,
+    AppliesTo NVARCHAR(50) DEFAULT 'All',
+    ApplyTargetId INT DEFAULT NULL,
+    CreatedBy INT,
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
+
+-- 3.16. Thiết lập chỉ mục (Indexes) để tăng hiệu suất truy vấn
 CREATE INDEX IX_Products_ProductCode ON Products(ProductCode);
 CREATE INDEX IX_SalesOrders_OrderDate ON SalesOrders(OrderDate);
 CREATE INDEX IX_PurchaseOrders_OrderDate ON PurchaseOrders(OrderDate);
+CREATE INDEX IX_Promotions_Code ON Promotions(PromotionCode);
 GO
 
 
@@ -197,20 +221,30 @@ GO
 -- 4. INSERT DỮ LIỆU MẪU ĐẦY ĐỦ ĐANG CÓ TRONG HỆ THỐNG
 -- ==================================================================================
 
--- 4.1. Nhập bảng vai trò (Roles)
+-- 4.1. Nhập bảng vai trò (Roles) - 5 vai trò phân quyền chi tiết
 SET IDENTITY_INSERT Roles ON;
 INSERT INTO Roles (RoleId, RoleName) VALUES
 (1, N'Admin'),
 (2, N'Manager'),
-(3, N'Staff');
+(3, N'Salesperson'),
+(4, N'Warehouse'),
+(5, N'Accountant');
 SET IDENTITY_INSERT Roles OFF;
 GO
 
--- 4.2. Nhập bảng nhân viên (Employees)
--- Mật khẩu mặc định là 'admin123', PasswordHash và PasswordSalt được lưu trữ dưới dạng byte nhị phân 0x00 đại diện mẫu.
+-- 4.2. Nhập bảng nhân viên (Employees) - 8 nhân viên mẫu
+-- Mật khẩu mặc định được lưu trữ dưới dạng byte nhị phân 0x00 đại diện mẫu.
+-- Trong thực tế, PasswordHash và PasswordSalt sẽ được tạo bởi PBKDF2 khi chạy ứng dụng.
 SET IDENTITY_INSERT Employees ON;
 INSERT INTO Employees (EmployeeId, Username, PasswordHash, PasswordSalt, FullName, Email, Phone, RoleId, CreatedAt, IsActive) VALUES
-(1, N'admin', 0x00, 0x00, N'System Administrator', N'admin@example.com', N'0123456789', 1, GETDATE(), 1);
+(1, N'admin',      0x00, 0x00, N'Nguyễn Văn Admin',     N'admin@schooldevice.vn',      N'0901234567', 1, GETDATE(), 1),
+(2, N'manager1',   0x00, 0x00, N'Trần Thị Quản Lý',    N'manager@schooldevice.vn',    N'0912345678', 2, GETDATE(), 1),
+(3, N'sale1',      0x00, 0x00, N'Lê Văn Bán Hàng',     N'sale1@schooldevice.vn',      N'0923456789', 3, GETDATE(), 1),
+(4, N'sale2',      0x00, 0x00, N'Phạm Thị Kinh Doanh', N'sale2@schooldevice.vn',      N'0934567890', 3, GETDATE(), 1),
+(5, N'warehouse1', 0x00, 0x00, N'Hoàng Văn Kho',       N'warehouse@schooldevice.vn',  N'0945678901', 4, GETDATE(), 1),
+(6, N'kttoan1',    0x00, 0x00, N'Ngô Thị Kế Toán',     N'accountant@schooldevice.vn', N'0956789012', 5, GETDATE(), 1),
+(7, N'sale3',      0x00, 0x00, N'Vũ Minh Đức',         N'duc.vu@schooldevice.vn',     N'0967890123', 3, GETDATE(), 1),
+(8, N'manager2',   0x00, 0x00, N'Đỗ Anh Tuấn',        N'tuan.do@schooldevice.vn',    N'0978901234', 2, GETDATE(), 1);
 SET IDENTITY_INSERT Employees OFF;
 GO
 
@@ -333,6 +367,17 @@ GO
 -- 4.10. Nhập bảng cài đặt (Settings)
 INSERT INTO Settings (SettingKey, SettingValue) VALUES
 (N'DefaultVAT', N'10');
+GO
+
+-- 4.11. Nhập bảng khuyến mãi (Promotions)
+SET IDENTITY_INSERT Promotions ON;
+INSERT INTO Promotions (PromotionId, PromotionCode, PromotionName, Description, DiscountType, DiscountValue, MinOrderAmount, MaxDiscountAmount, StartDate, EndDate, UsageLimit, UsageCount, IsActive, AppliesTo, ApplyTargetId, CreatedBy) VALUES
+(1, N'SUMMER2026', N'Khuyến mãi Hè 2026', N'Giảm 10% cho tất cả đơn hàng mùa hè', N'Percentage', 10, 5000000, 5000000, DATEADD(day,-10,GETDATE()), DATEADD(day,80,GETDATE()), 100, 5, 1, N'All', NULL, 1),
+(2, N'BIGORDER', N'Ưu đãi đơn lớn', N'Giảm trực tiếp 2 triệu cho đơn hàng trên 50 triệu', N'FixedAmount', 2000000, 50000000, NULL, DATEADD(day,-5,GETDATE()), DATEADD(day,60,GETDATE()), 50, 2, 1, N'All', NULL, 1),
+(3, N'STEM50', N'Ưu đãi thiết bị STEM', N'Giảm 15% cho thiết bị STEM', N'Percentage', 15, 1000000, 3000000, GETDATE(), DATEADD(day,45,GETDATE()), NULL, 0, 1, N'Category', 5, 1),
+(4, N'WELCOME', N'Chào mừng khách mới', N'Giảm 5% cho đơn hàng đầu tiên', N'Percentage', 5, 0, 2000000, DATEADD(day,-30,GETDATE()), DATEADD(day,180,GETDATE()), 200, 12, 1, N'All', NULL, 1),
+(5, N'EXPIRED01', N'Khuyến mãi Tết đã hết hạn', N'Chương trình giảm giá Tết 2026', N'Percentage', 20, 10000000, 10000000, DATEADD(day,-120,GETDATE()), DATEADD(day,-30,GETDATE()), 100, 45, 0, N'All', NULL, 1);
+SET IDENTITY_INSERT Promotions OFF;
 GO
 
 PRINT '=======================================================';

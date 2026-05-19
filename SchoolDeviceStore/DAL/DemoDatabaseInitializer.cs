@@ -1,6 +1,7 @@
 using System;
 using System.Configuration;
 using System.Data.SQLite;
+using System.Security.Cryptography;
 
 namespace DAL
 {
@@ -94,6 +95,7 @@ CREATE TABLE IF NOT EXISTS SalesOrders (
     Discount NUMERIC DEFAULT 0,
     VAT NUMERIC DEFAULT 0,
     TotalAmount NUMERIC DEFAULT 0,
+    PromotionId INTEGER NULL,
     FOREIGN KEY(CustomerId) REFERENCES Customers(CustomerId),
     FOREIGN KEY(CreatedBy) REFERENCES Employees(EmployeeId)
 );
@@ -108,6 +110,26 @@ CREATE TABLE IF NOT EXISTS SalesOrderDetails (
     FOREIGN KEY(ProductId) REFERENCES Products(ProductId)
 );
 
+CREATE TABLE IF NOT EXISTS Promotions (
+    PromotionId INTEGER PRIMARY KEY AUTOINCREMENT,
+    PromotionCode TEXT NOT NULL UNIQUE,
+    PromotionName TEXT NOT NULL,
+    Description TEXT,
+    DiscountType TEXT NOT NULL DEFAULT 'Percentage',
+    DiscountValue NUMERIC NOT NULL DEFAULT 0,
+    MinOrderAmount NUMERIC DEFAULT 0,
+    MaxDiscountAmount NUMERIC DEFAULT NULL,
+    StartDate TEXT NOT NULL,
+    EndDate TEXT NOT NULL,
+    UsageLimit INTEGER DEFAULT NULL,
+    UsageCount INTEGER DEFAULT 0,
+    IsActive INTEGER DEFAULT 1,
+    AppliesTo TEXT DEFAULT 'All',
+    ApplyTargetId INTEGER DEFAULT NULL,
+    CreatedBy INTEGER,
+    CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS Settings (
     SettingKey TEXT PRIMARY KEY,
     SettingValue TEXT
@@ -115,9 +137,15 @@ CREATE TABLE IF NOT EXISTS Settings (
 
 CREATE INDEX IF NOT EXISTS IX_Products_ProductCode ON Products(ProductCode);
 CREATE INDEX IF NOT EXISTS IX_SalesOrders_OrderDate ON SalesOrders(OrderDate);
+CREATE INDEX IF NOT EXISTS IX_Promotions_Code ON Promotions(PromotionCode);
+
+-- Seed 5 roles
 INSERT OR IGNORE INTO Roles (RoleId, RoleName) VALUES (1, 'Admin');
 INSERT OR IGNORE INTO Roles (RoleId, RoleName) VALUES (2, 'Manager');
-INSERT OR IGNORE INTO Roles (RoleId, RoleName) VALUES (3, 'Staff');
+INSERT OR IGNORE INTO Roles (RoleId, RoleName) VALUES (3, 'Salesperson');
+INSERT OR IGNORE INTO Roles (RoleId, RoleName) VALUES (4, 'Warehouse');
+INSERT OR IGNORE INTO Roles (RoleId, RoleName) VALUES (5, 'Accountant');
+
 INSERT OR IGNORE INTO Settings (SettingKey, SettingValue) VALUES ('DefaultVAT', '10');
 ");
 
@@ -173,8 +201,10 @@ INSERT OR IGNORE INTO Settings (SettingKey, SettingValue) VALUES ('DefaultVAT', 
                 Console.WriteLine("[DEBUG] Clearing old demo data and reseeding with new expanded dataset...");
                 ExecuteNonQuery(conn, "DELETE FROM Categories; DELETE FROM Suppliers; DELETE FROM Products; DELETE FROM Customers;");
             }
-            // Removed early return to allow new tables like SalesOrders to be seeded
-            
+
+            // Seed Employees with proper password hashes
+            SeedEmployees(conn);
+
             if (GetCount(conn, "SELECT COUNT(1) FROM Categories") == 0)
             {
                 ExecuteNonQuery(conn, @"
@@ -255,21 +285,22 @@ INSERT INTO Customers (CustomerCode, FullName, Email, Phone, Address, LoyaltyPoi
 ('CUST008','Trường Kinh tế Công nghệ','truongKTCN@example.com','0988888888','Ngô Gia Tự, Hà Nội',120);
 ");
             }
+
             if (GetCount(conn, "SELECT COUNT(1) FROM SalesOrders") == 0)
             {
                 Console.WriteLine("[DEBUG] Seeding SalesOrders and SalesOrderDetails...");
                 ExecuteNonQuery(conn, "PRAGMA foreign_keys = OFF;");
-                // Create a few sales orders over the last 30 days
+                // Create sales orders over the last 30 days, assign to different employees
                 ExecuteNonQuery(conn, @"
 INSERT INTO SalesOrders (SalesOrderId, SalesOrderCode, CustomerId, CreatedBy, OrderDate, SubTotal, Discount, VAT, TotalAmount) VALUES
 (1, 'INV-20260401-001', 1, 1, date('now', '-30 days'), 30000000, 1000000, 2900000, 31900000),
-(2, 'INV-20260405-002', 2, 1, date('now', '-25 days'), 45000000, 0, 4500000, 49500000),
-(3, 'INV-20260410-003', 3, 1, date('now', '-20 days'), 15000000, 500000, 1450000, 15950000),
-(4, 'INV-20260415-004', 4, 1, date('now', '-15 days'), 60000000, 2000000, 5800000, 63800000),
-(5, 'INV-20260420-005', 5, 1, date('now', '-10 days'), 12000000, 0, 1200000, 13200000),
-(6, 'INV-20260425-006', 1, 1, date('now', '-5 days'), 25000000, 1000000, 2400000, 26400000),
-(7, 'INV-20260428-007', 2, 1, date('now', '-2 days'), 35000000, 1500000, 3350000, 36850000),
-(8, 'INV-20260501-008', 3, 1, date('now', '-1 days'), 18000000, 0, 1800000, 19800000),
+(2, 'INV-20260405-002', 2, 3, date('now', '-25 days'), 45000000, 0, 4500000, 49500000),
+(3, 'INV-20260410-003', 3, 3, date('now', '-20 days'), 15000000, 500000, 1450000, 15950000),
+(4, 'INV-20260415-004', 4, 4, date('now', '-15 days'), 60000000, 2000000, 5800000, 63800000),
+(5, 'INV-20260420-005', 5, 3, date('now', '-10 days'), 12000000, 0, 1200000, 13200000),
+(6, 'INV-20260425-006', 1, 7, date('now', '-5 days'), 25000000, 1000000, 2400000, 26400000),
+(7, 'INV-20260428-007', 2, 4, date('now', '-2 days'), 35000000, 1500000, 3350000, 36850000),
+(8, 'INV-20260501-008', 3, 7, date('now', '-1 days'), 18000000, 0, 1800000, 19800000),
 (9, 'INV-20260502-009', NULL, 1, date('now'), 5000000, 0, 500000, 5500000);
 ");
 
@@ -288,6 +319,81 @@ INSERT INTO SalesOrderDetails (SalesOrderId, ProductId, Quantity, UnitPrice) VAL
 ");
                 ExecuteNonQuery(conn, "PRAGMA foreign_keys = ON;");
             }
+
+            // Seed Promotions
+            SeedPromotions(conn);
+        }
+
+        /// <summary>
+        /// Seed 8 sample employees with properly hashed passwords using PBKDF2.
+        /// Only seeds employees that don't already exist.
+        /// </summary>
+        private static void SeedEmployees(SQLiteConnection conn)
+        {
+            // Employee data: username, password, fullName, email, phone, roleId
+            var employees = new[]
+            {
+                new { Username = "admin",      Password = "admin123",      FullName = "Nguyễn Văn Admin",     Email = "admin@schooldevice.vn",      Phone = "0901234567", RoleId = 1 },
+                new { Username = "manager1",   Password = "manager123",    FullName = "Trần Thị Quản Lý",    Email = "manager@schooldevice.vn",    Phone = "0912345678", RoleId = 2 },
+                new { Username = "sale1",      Password = "sale123",       FullName = "Lê Văn Bán Hàng",     Email = "sale1@schooldevice.vn",      Phone = "0923456789", RoleId = 3 },
+                new { Username = "sale2",      Password = "sale123",       FullName = "Phạm Thị Kinh Doanh", Email = "sale2@schooldevice.vn",      Phone = "0934567890", RoleId = 3 },
+                new { Username = "warehouse1", Password = "warehouse123",  FullName = "Hoàng Văn Kho",       Email = "warehouse@schooldevice.vn",  Phone = "0945678901", RoleId = 4 },
+                new { Username = "kttoan1",    Password = "accountant123", FullName = "Ngô Thị Kế Toán",     Email = "accountant@schooldevice.vn", Phone = "0956789012", RoleId = 5 },
+                new { Username = "sale3",      Password = "sale123",       FullName = "Vũ Minh Đức",         Email = "duc.vu@schooldevice.vn",     Phone = "0967890123", RoleId = 3 },
+                new { Username = "manager2",   Password = "manager123",    FullName = "Đỗ Anh Tuấn",        Email = "tuan.do@schooldevice.vn",    Phone = "0978901234", RoleId = 2 },
+            };
+
+            foreach (var emp in employees)
+            {
+                var exists = GetCount(conn, "SELECT COUNT(1) FROM Employees WHERE Username = '" + emp.Username.Replace("'", "''") + "'");
+                if (exists > 0) continue;
+
+                // Generate proper PBKDF2 password hash
+                byte[] salt = new byte[16];
+                using (var rng = new RNGCryptoServiceProvider())
+                {
+                    rng.GetBytes(salt);
+                }
+                byte[] hash;
+                using (var pbkdf2 = new Rfc2898DeriveBytes(emp.Password, salt, 10000))
+                {
+                    hash = pbkdf2.GetBytes(32);
+                }
+
+                using (var cmd = new SQLiteCommand(@"
+INSERT INTO Employees (Username, PasswordHash, PasswordSalt, FullName, Email, Phone, RoleId, CreatedAt, IsActive)
+VALUES (@username, @hash, @salt, @fullname, @email, @phone, @roleId, CURRENT_TIMESTAMP, 1);", conn))
+                {
+                    cmd.Parameters.AddWithValue("@username", emp.Username);
+                    cmd.Parameters.AddWithValue("@hash", hash);
+                    cmd.Parameters.AddWithValue("@salt", salt);
+                    cmd.Parameters.AddWithValue("@fullname", emp.FullName);
+                    cmd.Parameters.AddWithValue("@email", emp.Email);
+                    cmd.Parameters.AddWithValue("@phone", emp.Phone);
+                    cmd.Parameters.AddWithValue("@roleId", emp.RoleId);
+                    cmd.ExecuteNonQuery();
+                }
+
+                Console.WriteLine("[DEBUG] Seeded employee: " + emp.Username + " (Role: " + emp.RoleId + ")");
+            }
+        }
+
+        /// <summary>
+        /// Seed 5 sample promotions.
+        /// </summary>
+        private static void SeedPromotions(SQLiteConnection conn)
+        {
+            if (GetCount(conn, "SELECT COUNT(1) FROM Promotions") > 0) return;
+
+            ExecuteNonQuery(conn, @"
+INSERT INTO Promotions (PromotionCode, PromotionName, Description, DiscountType, DiscountValue, MinOrderAmount, MaxDiscountAmount, StartDate, EndDate, UsageLimit, UsageCount, IsActive, AppliesTo, ApplyTargetId, CreatedBy) VALUES
+('SUMMER2026', 'Khuyến mãi Hè 2026', 'Giảm 10% cho tất cả đơn hàng mùa hè', 'Percentage', 10, 5000000, 5000000, date('now', '-10 days'), date('now', '+80 days'), 100, 5, 1, 'All', NULL, 1),
+('BIGORDER', 'Ưu đãi đơn lớn', 'Giảm trực tiếp 2 triệu cho đơn hàng trên 50 triệu', 'FixedAmount', 2000000, 50000000, NULL, date('now', '-5 days'), date('now', '+60 days'), 50, 2, 1, 'All', NULL, 1),
+('STEM50', 'Ưu đãi thiết bị STEM', 'Giảm 15% cho thiết bị STEM', 'Percentage', 15, 1000000, 3000000, date('now'), date('now', '+45 days'), NULL, 0, 1, 'Category', 5, 1),
+('WELCOME', 'Chào mừng khách mới', 'Giảm 5% cho đơn hàng đầu tiên', 'Percentage', 5, 0, 2000000, date('now', '-30 days'), date('now', '+180 days'), 200, 12, 1, 'All', NULL, 1),
+('EXPIRED01', 'Khuyến mãi Tết đã hết hạn', 'Chương trình giảm giá Tết 2026', 'Percentage', 20, 10000000, 10000000, date('now', '-120 days'), date('now', '-30 days'), 100, 45, 0, 'All', NULL, 1);
+");
+            Console.WriteLine("[DEBUG] Seeded 5 sample promotions");
         }
 
         private static void ExecuteNonQuery(SQLiteConnection conn, string sql)

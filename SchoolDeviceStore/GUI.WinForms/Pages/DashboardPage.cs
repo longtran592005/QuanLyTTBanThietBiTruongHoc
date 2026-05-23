@@ -258,7 +258,7 @@ namespace GUI.WinForms
             var productsCount = DbHelper.ExecuteScalar("SELECT COUNT(1) FROM Products");
             var lowStockCount = DbHelper.ExecuteScalar("SELECT COUNT(1) FROM Products WHERE Quantity <= 5");
 
-            _revenueCard.SetData("Doanh thu (30 ngày)", Convert.ToDecimal(revenue).ToString("N0"), "Tổng hợp vận hành trực tiếp", UITheme.PrimaryColor);
+            _revenueCard.SetData("Doanh thu (30 ngày)", Convert.ToDecimal(revenue).ToString("N0") + " đ", "Tổng hợp vận hành trực tiếp", UITheme.PrimaryColor);
             _salesCard.SetData("Tổng số hóa đơn", Convert.ToInt32(salesCount).ToString(), "Hóa đơn trong 30 ngày gần nhất", UITheme.SuccessColor);
             _productsCard.SetData("Sản phẩm", Convert.ToInt32(productsCount).ToString(), "Số lượng trong danh mục", UITheme.WarningColor);
             _lowStockCard.SetData("Sắp hết hàng", Convert.ToInt32(lowStockCount).ToString(), "Cần nhập bổ sung", UITheme.ErrorColor);
@@ -271,23 +271,18 @@ namespace GUI.WinForms
                 revenueSeries.Points.AddXY(Convert.ToDateTime(row["ReportDate"]).ToString("dd/MM"), Convert.ToDecimal(row["Revenue"]));
             }
 
-            _lowStockGrid.DataSource = DbHelper.ExecuteQuery("SELECT ProductCode, ProductName, Quantity, UnitPrice FROM Products WHERE Quantity <= 5 ORDER BY Quantity ASC, ProductName ASC LIMIT 10");
-            if (_lowStockGrid.Columns.Count >= 4)
+            _lowStockGrid.DataSource = DbHelper.ExecuteQuery("SELECT ProductName, Quantity FROM Products WHERE Quantity <= 5 ORDER BY Quantity ASC, ProductName ASC LIMIT 10");
+            if (_lowStockGrid.Columns.Count >= 2)
             {
-                _lowStockGrid.Columns["ProductCode"].HeaderText = "Mã hàng";
-                _lowStockGrid.Columns["ProductName"].HeaderText = "Tên sản phẩm";
+                _lowStockGrid.Columns["ProductName"].HeaderText = "Sản phẩm";
                 _lowStockGrid.Columns["ProductName"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
                 
-                _lowStockGrid.Columns["Quantity"].HeaderText = "Số lượng";
+                _lowStockGrid.Columns["Quantity"].HeaderText = "Tồn";
                 _lowStockGrid.Columns["Quantity"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-                
-                _lowStockGrid.Columns["UnitPrice"].HeaderText = "Đơn giá";
-                _lowStockGrid.Columns["UnitPrice"].DefaultCellStyle.Format = "#,##0 đ";
-                _lowStockGrid.Columns["UnitPrice"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             }
 
-            _recentInvoicesGrid.DataSource = DbHelper.ExecuteQuery("SELECT SalesOrderCode, datetime(OrderDate) AS OrderDate, TotalAmount, Discount, VAT FROM SalesOrders ORDER BY datetime(OrderDate) DESC LIMIT 10");
-            if (_recentInvoicesGrid.Columns.Count >= 5)
+            _recentInvoicesGrid.DataSource = DbHelper.ExecuteQuery("SELECT SalesOrderCode, datetime(OrderDate) AS OrderDate, TotalAmount FROM SalesOrders ORDER BY datetime(OrderDate) DESC LIMIT 10");
+            if (_recentInvoicesGrid.Columns.Count >= 3)
             {
                 _recentInvoicesGrid.Columns["SalesOrderCode"].HeaderText = "Mã hóa đơn";
                 _recentInvoicesGrid.Columns["OrderDate"].HeaderText = "Ngày lập";
@@ -296,13 +291,6 @@ namespace GUI.WinForms
                 _recentInvoicesGrid.Columns["TotalAmount"].HeaderText = "Tổng tiền";
                 _recentInvoicesGrid.Columns["TotalAmount"].DefaultCellStyle.Format = "#,##0 đ";
                 _recentInvoicesGrid.Columns["TotalAmount"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                
-                _recentInvoicesGrid.Columns["Discount"].HeaderText = "Giảm giá";
-                _recentInvoicesGrid.Columns["Discount"].DefaultCellStyle.Format = "#,##0 đ";
-                _recentInvoicesGrid.Columns["Discount"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                
-                _recentInvoicesGrid.Columns["VAT"].HeaderText = "VAT (%)";
-                _recentInvoicesGrid.Columns["VAT"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             }
         }
     }

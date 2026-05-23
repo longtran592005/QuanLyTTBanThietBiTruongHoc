@@ -61,7 +61,13 @@ namespace GUI.WinForms
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F)); // Right: Filters
 
             // Left side: Buttons
-            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(0) };
+            var flow = new FlowLayoutPanel 
+            { 
+                Dock = DockStyle.Fill, 
+                FlowDirection = FlowDirection.LeftToRight, 
+                WrapContents = false, 
+                Padding = new Padding(0, 12, 0, 0)
+            };
             var addButton = UIHelper.CreatePrimaryButton("Thêm");
             addButton.Click += (s, e) => AddItem();
             var editButton = UIHelper.CreateSecondaryButton("Sửa");
@@ -79,18 +85,21 @@ namespace GUI.WinForms
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 3,
-                RowCount = 1
+                RowCount = 1,
+                Padding = new Padding(0, 12, 0, 0)
             };
-            filterLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60F));
-            filterLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
-            filterLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15F));
+            filterLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            filterLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130F));
+            filterLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F));
 
-            _searchBox.Dock = DockStyle.Fill;
+            _searchBox.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            _searchBox.Height = 36;
             UIHelper.StyleTextBox(_searchBox);
             UIHelper.SetPlaceholder(_searchBox, "🔍 Tìm kiếm sản phẩm...");
             _searchBox.TextChanged += (s, e) => ApplyFilters();
 
-            _statusFilter.Dock = DockStyle.Fill;
+            _statusFilter.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            _statusFilter.Height = 36;
             _statusFilter.DropDownStyle = ComboBoxStyle.DropDownList;
             UIHelper.StyleTextBox(_statusFilter);
             _statusFilter.Items.AddRange(new object[] { "Tất cả", "Còn hàng", "Hết hàng" });
@@ -98,7 +107,8 @@ namespace GUI.WinForms
             _statusFilter.SelectedIndexChanged += (s, e) => ApplyFilters();
 
             var exportCsvButton = UIHelper.CreateSecondaryButton("Xuất CSV");
-            exportCsvButton.Dock = DockStyle.Fill;
+            exportCsvButton.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            exportCsvButton.Height = 36;
             exportCsvButton.Click += (s, e) => ExportHelper.ExportDataGridViewToCsv(_grid, "products.csv");
 
             filterLayout.Controls.Add(_searchBox, 0, 0);
@@ -202,12 +212,12 @@ namespace GUI.WinForms
             var view = filtered.Select(x => new
             {
                 x.ProductId,
-                x.ProductCode,
-                x.ProductName,
-                x.Quantity,
-                UnitPrice = DataGridViewHelper.FormatCurrencyVNShort(x.UnitPrice),
-                PurchasePrice = DataGridViewHelper.FormatCurrencyVNShort(x.PurchasePrice),
-                x.Status
+                ProductCode = x.ProductCode,
+                ProductName = x.ProductName,
+                Quantity = x.Quantity,
+                UnitPrice = DataGridViewHelper.FormatCurrencyVN(x.UnitPrice),
+                PurchasePrice = DataGridViewHelper.FormatCurrencyVN(x.PurchasePrice),
+                Status = (x.Status == "Available") ? "Còn hàng" : "Hết hàng"
             }).ToList();
 
             _grid.DataSource = view;
@@ -217,14 +227,38 @@ namespace GUI.WinForms
             if (_grid.Columns["ProductId"] != null)
                 _grid.Columns["ProductId"].Visible = false;
 
+            if (_grid.Columns["ProductCode"] != null)
+                _grid.Columns["ProductCode"].HeaderText = "Mã sản phẩm";
+
+            if (_grid.Columns["ProductName"] != null)
+            {
+                _grid.Columns["ProductName"].HeaderText = "Tên sản phẩm";
+                _grid.Columns["ProductName"].FillWeight = 160F;
+            }
+
             if (_grid.Columns["Quantity"] != null)
-                _grid.Columns["Quantity"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            {
+                _grid.Columns["Quantity"].HeaderText = "Số lượng";
+                _grid.Columns["Quantity"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            }
                 
             if (_grid.Columns["UnitPrice"] != null)
+            {
+                _grid.Columns["UnitPrice"].HeaderText = "Giá bán";
                 _grid.Columns["UnitPrice"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            }
                 
             if (_grid.Columns["PurchasePrice"] != null)
+            {
+                _grid.Columns["PurchasePrice"].HeaderText = "Giá nhập";
                 _grid.Columns["PurchasePrice"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            }
+
+            if (_grid.Columns["Status"] != null)
+            {
+                _grid.Columns["Status"].HeaderText = "Trạng thái";
+                _grid.Columns["Status"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            }
 
             _grid.ClearSelection();
             

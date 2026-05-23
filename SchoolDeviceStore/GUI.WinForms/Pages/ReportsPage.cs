@@ -40,6 +40,7 @@ namespace GUI.WinForms
             Dock = DockStyle.Fill;
             BackColor = UITheme.BackgroundColor;
             BuildLayout();
+            _revenueGrid.CellFormatting += RevenueGrid_CellFormatting;
             Load += (s, e) => LoadReports();
         }
 
@@ -214,11 +215,27 @@ namespace GUI.WinForms
 
         private Panel BuildKpiCard(string title, Label valueLabel, Label growthLabel, Color accentColor)
         {
-            var card = new Panel { Dock = DockStyle.Fill, BackColor = UITheme.SurfaceColor, Padding = new Padding(16), Margin = new Padding(0, 0, 8, 0) };
+            var card = new Panel { Dock = DockStyle.Fill, BackColor = UITheme.SurfaceColor, Padding = new Padding(16, 12, 16, 12), Margin = new Padding(0, 0, 8, 0) };
             UIHelper.StyleCard(card);
-            var titleLabel = new Label { Dock = DockStyle.Top, Height = 20, Text = title, Font = UITheme.CaptionFont, ForeColor = UITheme.TextSecondaryColor };
-            valueLabel.Dock = DockStyle.Fill; valueLabel.Font = UITheme.TitleFont; valueLabel.ForeColor = accentColor; valueLabel.Text = "0"; valueLabel.TextAlign = ContentAlignment.MiddleLeft;
-            growthLabel.Dock = DockStyle.Bottom; growthLabel.Height = 20; growthLabel.Font = UITheme.CaptionFont; growthLabel.ForeColor = UITheme.TextSecondaryColor; growthLabel.Text = "";
+            
+            var titleLabel = new Label { Dock = DockStyle.Top, Height = 18, Text = title, Font = UITheme.CaptionFont, ForeColor = UITheme.TextSecondaryColor, Margin = Padding.Empty };
+            
+            valueLabel.Dock = DockStyle.Top; 
+            valueLabel.Height = 32; 
+            valueLabel.Font = UITheme.TitleFont; 
+            valueLabel.ForeColor = accentColor; 
+            valueLabel.Text = "0"; 
+            valueLabel.TextAlign = ContentAlignment.MiddleLeft;
+            valueLabel.Margin = Padding.Empty;
+            
+            growthLabel.Dock = DockStyle.Top; 
+            growthLabel.Height = 18; 
+            growthLabel.Font = UITheme.CaptionFont; 
+            growthLabel.ForeColor = UITheme.TextSecondaryColor; 
+            growthLabel.Text = ""; 
+            growthLabel.TextAlign = ContentAlignment.MiddleLeft;
+            growthLabel.Margin = Padding.Empty;
+
             card.Controls.Add(growthLabel);
             card.Controls.Add(valueLabel);
             card.Controls.Add(titleLabel);
@@ -369,6 +386,26 @@ namespace GUI.WinForms
                 var revenueTable = _service.GetRevenueByDayFiltered(from, to, catId, null, empId);
                 _revenueGrid.DataSource = revenueTable;
 
+                if (_revenueGrid.Columns.Contains("ReportDate"))
+                {
+                    _revenueGrid.Columns["ReportDate"].HeaderText = "Ngày";
+                    _revenueGrid.Columns["ReportDate"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                }
+                if (_revenueGrid.Columns.Contains("Revenue"))
+                {
+                    _revenueGrid.Columns["Revenue"].HeaderText = "Doanh thu";
+                    _revenueGrid.Columns["Revenue"].DefaultCellStyle.Format = "#,##0 đ";
+                    _revenueGrid.Columns["Revenue"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                }
+                if (_revenueGrid.Columns.Contains("OrderCount"))
+                {
+                    _revenueGrid.Columns["OrderCount"].HeaderText = "Số đơn";
+                    _revenueGrid.Columns["OrderCount"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                }
+                if (_revenueGrid.Columns.Contains("SubTotal")) _revenueGrid.Columns["SubTotal"].Visible = false;
+                if (_revenueGrid.Columns.Contains("Discount")) _revenueGrid.Columns["Discount"].Visible = false;
+                if (_revenueGrid.Columns.Contains("VAT")) _revenueGrid.Columns["VAT"].Visible = false;
+
                 // Chart - current period
                 var currentSeries = _revenueChart.Series["Revenue"];
                 currentSeries.Points.Clear();
@@ -391,6 +428,20 @@ namespace GUI.WinForms
 
                 // Top products
                 _topProductsGrid.DataSource = _service.GetTopProducts(from, to);
+
+                if (_topProductsGrid.Columns.Contains("ProductCode")) _topProductsGrid.Columns["ProductCode"].Visible = false;
+                if (_topProductsGrid.Columns.Contains("ProductName")) _topProductsGrid.Columns["ProductName"].HeaderText = "Sản phẩm";
+                if (_topProductsGrid.Columns.Contains("SoldQuantity"))
+                {
+                    _topProductsGrid.Columns["SoldQuantity"].HeaderText = "Đã bán";
+                    _topProductsGrid.Columns["SoldQuantity"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                }
+                if (_topProductsGrid.Columns.Contains("SalesAmount"))
+                {
+                    _topProductsGrid.Columns["SalesAmount"].HeaderText = "Doanh số";
+                    _topProductsGrid.Columns["SalesAmount"].DefaultCellStyle.Format = "#,##0 đ";
+                    _topProductsGrid.Columns["SalesAmount"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                }
 
                 // Category donut chart
                 var catData = _service.GetRevenueByCategory(from, to);
@@ -419,6 +470,16 @@ namespace GUI.WinForms
 
                 // Alerts
                 _alertsGrid.DataSource = _service.GetAlerts();
+
+                if (_alertsGrid.Columns.Contains("AlertType")) _alertsGrid.Columns["AlertType"].HeaderText = "Loại";
+                if (_alertsGrid.Columns.Contains("ProductCode")) _alertsGrid.Columns["ProductCode"].Visible = false;
+                if (_alertsGrid.Columns.Contains("ProductName")) _alertsGrid.Columns["ProductName"].HeaderText = "Sản phẩm";
+                if (_alertsGrid.Columns.Contains("CurrentValue"))
+                {
+                    _alertsGrid.Columns["CurrentValue"].HeaderText = "Tồn";
+                    _alertsGrid.Columns["CurrentValue"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                }
+                if (_alertsGrid.Columns.Contains("Detail")) _alertsGrid.Columns["Detail"].Visible = false;
             }
             catch (Exception ex)
             {
@@ -487,6 +548,22 @@ namespace GUI.WinForms
             {
                 AppLogger.Error("PDF export failed", ex);
                 UiDialogs.ShowError("Không thể xuất PDF.");
+            }
+        }
+
+        private void RevenueGrid_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+            {
+                var colName = _revenueGrid.Columns[e.ColumnIndex].Name;
+                if (colName == "ReportDate" && e.Value != null)
+                {
+                    if (DateTime.TryParse(e.Value.ToString(), out DateTime date))
+                    {
+                        e.Value = date.ToString("dd/MM/yyyy");
+                        e.FormattingApplied = true;
+                    }
+                }
             }
         }
 

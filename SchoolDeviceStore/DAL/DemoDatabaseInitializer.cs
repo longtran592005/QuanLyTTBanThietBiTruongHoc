@@ -149,6 +149,11 @@ INSERT OR IGNORE INTO Roles (RoleId, RoleName) VALUES (5, 'Accountant');
 INSERT OR IGNORE INTO Settings (SettingKey, SettingValue) VALUES ('DefaultVAT', '10');
 ");
 
+                // Auto-migrate schema upgrades for older databases on users' machines
+                AddColumnIfMissing(conn, "Employees", "IsActive", "INTEGER DEFAULT 1");
+                AddColumnIfMissing(conn, "Employees", "CreatedAt", "TEXT DEFAULT CURRENT_TIMESTAMP");
+                AddColumnIfMissing(conn, "SalesOrders", "PromotionId", "INTEGER NULL");
+
                 if (ShouldSeedDemoData())
                 {
                     Console.WriteLine("[DEBUG] Seeding demo data...");
@@ -409,6 +414,36 @@ INSERT INTO Promotions (PromotionCode, PromotionName, Description, DiscountType,
             using (var cmd = new SQLiteCommand(sql, conn))
             {
                 return (long)cmd.ExecuteScalar();
+            }
+        }
+
+        private static void AddColumnIfMissing(SQLiteConnection conn, string tableName, string columnName, string columnDefinition)
+        {
+            try
+            {
+                using (var cmd = new SQLiteCommand($"PRAGMA table_info({tableName})", conn))
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var name = reader["name"]?.ToString();
+                        if (string.Equals(name, columnName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return; // Column already exists!
+                        }
+                    }
+                }
+
+                // If column doesn't exist, add it
+                Console.WriteLine($"[DEBUG] Migrating database: Adding column '{columnName}' to table '{tableName}'");
+                using (var alterCmd = new SQLiteCommand($"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition}", conn))
+                {
+                    alterCmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WARNING] Migration check failed for table {tableName}, column {columnName}: {ex.Message}");
             }
         }
     }

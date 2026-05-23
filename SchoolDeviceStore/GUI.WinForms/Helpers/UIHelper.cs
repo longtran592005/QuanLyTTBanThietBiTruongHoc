@@ -209,9 +209,9 @@ namespace GUI.WinForms
             grid.ColumnHeadersDefaultCellStyle.Font = UITheme.BodyBoldFont;
             grid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
             grid.ColumnHeadersDefaultCellStyle.Padding = new Padding(12, 12, 12, 12);
-            grid.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.True;
-            grid.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
-            grid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            grid.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.False;
+            grid.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
+            grid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
             grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
             grid.AdvancedColumnHeadersBorderStyle.All = DataGridViewAdvancedCellBorderStyle.Single;
             grid.AdvancedColumnHeadersBorderStyle.Top = DataGridViewAdvancedCellBorderStyle.None;
@@ -225,17 +225,104 @@ namespace GUI.WinForms
             grid.AdvancedCellBorderStyle.Bottom = DataGridViewAdvancedCellBorderStyle.Single;
         }
 
-        public static void StyleActionButton(Button button, string text, Color backColor)
+        public static void StyleActionButton(Button button, string text, Color backColor, Color foreColor = default(Color), Color borderColor = default(Color))
         {
             button.Text = text;
             button.BackColor = backColor;
-            button.ForeColor = Color.White;
+            
+            Color resolvedFore = (foreColor == default(Color)) 
+                ? (backColor == UITheme.SurfaceColor ? Color.FromArgb(55, 65, 81) : Color.White) 
+                : foreColor;
+            button.ForeColor = resolvedFore;
+            
             button.FlatStyle = FlatStyle.Flat;
             button.Font = UITheme.BodyBoldFont;
             button.FlatAppearance.BorderSize = 0;
-            button.FlatAppearance.MouseOverBackColor = ControlPaint.Light(backColor);
-            button.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(backColor);
             button.Cursor = Cursors.Hand;
+
+            if (backColor == UITheme.PrimaryColor)
+            {
+                button.FlatAppearance.MouseOverBackColor = UITheme.PrimaryHoverColor;
+                button.FlatAppearance.MouseDownBackColor = Color.FromArgb(30, 64, 175);
+            }
+            else if (backColor == UITheme.ErrorColor)
+            {
+                button.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 38, 38);
+                button.FlatAppearance.MouseDownBackColor = Color.FromArgb(185, 28, 28);
+            }
+            else if (resolvedFore == UITheme.ErrorColor)
+            {
+                button.FlatAppearance.MouseOverBackColor = Color.FromArgb(254, 242, 242);
+                button.FlatAppearance.MouseDownBackColor = Color.FromArgb(254, 226, 226);
+            }
+            else
+            {
+                button.FlatAppearance.MouseOverBackColor = Color.FromArgb(243, 244, 246);
+                button.FlatAppearance.MouseDownBackColor = Color.FromArgb(229, 231, 235);
+            }
+
+            button.Resize += (s, e) =>
+            {
+                if (button.Width > 1 && button.Height > 1)
+                {
+                    var rect = new Rectangle(0, 0, button.Width, button.Height);
+                    using (var path = GetRoundedPath(rect, 6))
+                    {
+                        var oldRegion = button.Region;
+                        button.Region = new Region(path);
+                        oldRegion?.Dispose();
+                    }
+                }
+            };
+
+            button.EnabledChanged += (s, e) =>
+            {
+                if (button.Enabled)
+                {
+                    button.ForeColor = resolvedFore;
+                }
+                else
+                {
+                    button.ForeColor = Color.Transparent;
+                }
+                button.Invalidate();
+            };
+
+            button.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, button.Width - 1, button.Height - 1);
+                using (var path = GetRoundedPath(rect, 6))
+                {
+                    if (!button.Enabled)
+                    {
+                        using (var brush = new SolidBrush(Color.FromArgb(243, 244, 246)))
+                        {
+                            e.Graphics.FillPath(brush, path);
+                        }
+                        using (var pen = new Pen(Color.FromArgb(229, 231, 235), 1.5f))
+                        {
+                            e.Graphics.DrawPath(pen, path);
+                        }
+                        
+                        TextRenderer.DrawText(e.Graphics, button.Text, button.Font, rect, Color.FromArgb(156, 163, 175), 
+                            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak | TextFormatFlags.SingleLine);
+                        return;
+                    }
+
+                    Color borderC = (borderColor == default(Color))
+                        ? (backColor == UITheme.SurfaceColor ? Color.FromArgb(209, 213, 219) : backColor)
+                        : borderColor;
+                        
+                    if (borderC != Color.Transparent && borderC != UITheme.BackgroundColor)
+                    {
+                        using (var pen = new Pen(borderC, 1.5f))
+                        {
+                            e.Graphics.DrawPath(pen, path);
+                        }
+                    }
+                }
+            };
         }
 
         public static void SetSidebarButtonState(Button button, bool active)
@@ -320,12 +407,42 @@ namespace GUI.WinForms
                 }
             };
 
+            button.EnabledChanged += (s, e) =>
+            {
+                if (button.Enabled)
+                {
+                    button.ForeColor = foreColor;
+                }
+                else
+                {
+                    button.ForeColor = Color.Transparent;
+                }
+                button.Invalidate();
+            };
+
             button.Paint += (s, e) =>
             {
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 var rect = new Rectangle(0, 0, button.Width - 1, button.Height - 1);
                 using (var path = GetRoundedPath(rect, 6)) // Smooth the edges via drawpath
                 {
+                    if (!button.Enabled)
+                    {
+                        // Custom drawing for disabled state
+                        using (var brush = new SolidBrush(Color.FromArgb(243, 244, 246)))
+                        {
+                            e.Graphics.FillPath(brush, path);
+                        }
+                        using (var pen = new Pen(Color.FromArgb(229, 231, 235), 1.5f))
+                        {
+                            e.Graphics.DrawPath(pen, path);
+                        }
+                        
+                        TextRenderer.DrawText(e.Graphics, button.Text, button.Font, rect, Color.FromArgb(156, 163, 175), 
+                            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak | TextFormatFlags.SingleLine);
+                        return;
+                    }
+
                     Color borderC = (borderColor == default(Color)) ? backColor : borderColor;
                     if (borderC != Color.Transparent && borderC != UITheme.BackgroundColor)
                     {

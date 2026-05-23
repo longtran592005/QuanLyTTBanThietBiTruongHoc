@@ -22,6 +22,7 @@ namespace GUI.WinForms
             Dock = DockStyle.Fill;
             BackColor = UITheme.BackgroundColor;
             BuildLayout();
+            _grid.CellFormatting += Grid_CellFormatting;
             Load += (s, e) => RefreshGrid();
         }
 
@@ -68,13 +69,13 @@ namespace GUI.WinForms
             var roleLbl = new Label { Text = "  Vai trò:", AutoSize = true, TextAlign = ContentAlignment.MiddleCenter, Font = UITheme.CaptionFont, ForeColor = UITheme.TextSecondaryColor, Margin = new Padding(12, 10, 4, 0) };
             layout.Controls.Add(roleLbl);
             _roleFilter.DropDownStyle = ComboBoxStyle.DropDownList;
-            _roleFilter.Width = 140;
-            _roleFilter.Items.Add("Tất cả");
-            _roleFilter.Items.Add("Admin");
-            _roleFilter.Items.Add("Manager");
-            _roleFilter.Items.Add("Salesperson");
-            _roleFilter.Items.Add("Warehouse");
-            _roleFilter.Items.Add("Accountant");
+            _roleFilter.Width = 160;
+            _roleFilter.Items.Add(new RoleComboItem { Value = "Tất cả", Display = "Tất cả" });
+            _roleFilter.Items.Add(new RoleComboItem { Value = "Admin", Display = "Quản trị viên" });
+            _roleFilter.Items.Add(new RoleComboItem { Value = "Manager", Display = "Quản lý" });
+            _roleFilter.Items.Add(new RoleComboItem { Value = "Salesperson", Display = "Nhân viên bán hàng" });
+            _roleFilter.Items.Add(new RoleComboItem { Value = "Warehouse", Display = "Thủ kho" });
+            _roleFilter.Items.Add(new RoleComboItem { Value = "Accountant", Display = "Kế toán" });
             _roleFilter.SelectedIndex = 0;
             _roleFilter.SelectedIndexChanged += (s, e) => RefreshGrid();
             layout.Controls.Add(_roleFilter);
@@ -119,10 +120,9 @@ namespace GUI.WinForms
 
                 // Apply filters
                 var filters = new System.Collections.Generic.List<string>();
-                if (_roleFilter.SelectedIndex > 0)
+                if (_roleFilter.SelectedIndex > 0 && _roleFilter.SelectedItem is RoleComboItem selectedRole)
                 {
-                    var roleName = _roleFilter.SelectedItem.ToString();
-                    filters.Add($"[Vai trò] = '{roleName}'");
+                    filters.Add($"[Vai trò] = '{selectedRole.Value}'");
                 }
                 if (_statusFilter.SelectedIndex > 0)
                 {
@@ -282,6 +282,41 @@ namespace GUI.WinForms
                 dialog.CancelButton = btnCancel;
                 dialog.ShowDialog(this);
             }
+        }
+
+        private void Grid_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+            {
+                var colName = _grid.Columns[e.ColumnIndex].Name;
+                if (colName == "Vai trò" && e.Value != null)
+                {
+                    var val = e.Value.ToString();
+                    switch (val)
+                    {
+                        case "Admin": e.Value = "Quản trị viên"; e.FormattingApplied = true; break;
+                        case "Manager": e.Value = "Quản lý"; e.FormattingApplied = true; break;
+                        case "Salesperson": e.Value = "Nhân viên bán hàng"; e.FormattingApplied = true; break;
+                        case "Warehouse": e.Value = "Thủ kho"; e.FormattingApplied = true; break;
+                        case "Accountant": e.Value = "Kế toán"; e.FormattingApplied = true; break;
+                    }
+                }
+                else if (colName == "Ngày tạo" && e.Value != null)
+                {
+                    if (DateTime.TryParse(e.Value.ToString(), out DateTime date))
+                    {
+                        e.Value = date.ToString("dd/MM/yyyy");
+                        e.FormattingApplied = true;
+                    }
+                }
+            }
+        }
+
+        private class RoleComboItem
+        {
+            public string Value { get; set; }
+            public string Display { get; set; }
+            public override string ToString() => Display;
         }
     }
 }

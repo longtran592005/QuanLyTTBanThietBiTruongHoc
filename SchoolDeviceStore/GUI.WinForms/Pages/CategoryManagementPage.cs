@@ -39,7 +39,7 @@ namespace GUI.WinForms
 
         private Control BuildToolbar()
         {
-            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(0, 10, 0, 0) };
             var add = UIHelper.CreatePrimaryButton("Thêm"); add.Click += (s, e) => AddItem();
             var edit = UIHelper.CreateSecondaryButton("Sửa"); edit.Click += (s, e) => EditItem();
             var delete = UIHelper.CreateOutlineDangerButton("Xóa"); delete.Click += (s, e) => DeleteItem();

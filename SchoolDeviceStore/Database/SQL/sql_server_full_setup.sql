@@ -237,14 +237,14 @@ GO
 -- Trong thực tế, PasswordHash và PasswordSalt sẽ được tạo bởi PBKDF2 khi chạy ứng dụng.
 SET IDENTITY_INSERT Employees ON;
 INSERT INTO Employees (EmployeeId, Username, PasswordHash, PasswordSalt, FullName, Email, Phone, RoleId, CreatedAt, IsActive) VALUES
-(1, N'admin',      0x00, 0x00, N'Nguyễn Văn Admin',     N'admin@schooldevice.vn',      N'0901234567', 1, GETDATE(), 1),
-(2, N'manager1',   0x00, 0x00, N'Trần Thị Quản Lý',    N'manager@schooldevice.vn',    N'0912345678', 2, GETDATE(), 1),
-(3, N'sale1',      0x00, 0x00, N'Lê Văn Bán Hàng',     N'sale1@schooldevice.vn',      N'0923456789', 3, GETDATE(), 1),
-(4, N'sale2',      0x00, 0x00, N'Phạm Thị Kinh Doanh', N'sale2@schooldevice.vn',      N'0934567890', 3, GETDATE(), 1),
-(5, N'warehouse1', 0x00, 0x00, N'Hoàng Văn Kho',       N'warehouse@schooldevice.vn',  N'0945678901', 4, GETDATE(), 1),
-(6, N'kttoan1',    0x00, 0x00, N'Ngô Thị Kế Toán',     N'accountant@schooldevice.vn', N'0956789012', 5, GETDATE(), 1),
-(7, N'sale3',      0x00, 0x00, N'Vũ Minh Đức',         N'duc.vu@schooldevice.vn',     N'0967890123', 3, GETDATE(), 1),
-(8, N'manager2',   0x00, 0x00, N'Đỗ Anh Tuấn',        N'tuan.do@schooldevice.vn',    N'0978901234', 2, GETDATE(), 1);
+(1, N'admin',      0x875A03567493BB86844834C9067A25551587F00758E17FCF59C77CA617EC38C3, 0x42685281D102775AEFA433267C9BA41B, N'Nguyễn Văn Admin',     N'admin@schooldevice.vn',      N'0901234567', 1, GETDATE(), 1),
+(2, N'manager1',   0x1F6F21BE38FC76858F21D9AF9BEE97C589DE3B1FF356AB868021205E1E85E741, 0x6E8113B0121AD088C4C99F895EA914A5, N'Trần Thị Quản Lý',    N'manager@schooldevice.vn',    N'0912345678', 2, GETDATE(), 1),
+(3, N'sale1',      0x3E6BFEDFA48A8077FAF4FB0FBB15A08015750E05FCD8E336FAEAE5E684B0D360, 0x2B31478B981960F4C2CE86A0EAF1CD66, N'Lê Văn Bán Hàng',     N'sale1@schooldevice.vn',      N'0923456789', 3, GETDATE(), 1),
+(4, N'sale2',      0xABC41EF5C5EC97A8F30460CDB94F5F05D73EA157E441C9DA4A1F63A861928409, 0xB32D96180B54F0BDF82556D1E5F44C9D, N'Phạm Thị Kinh Doanh', N'sale2@schooldevice.vn',      N'0934567890', 3, GETDATE(), 1),
+(5, N'warehouse1', 0xD1FDC31A046F9D7247A0E97B48B4A3237154AE70DBBEE5C3CF44C726E8B804BA, 0x889438779E5F034D68F9F3D0C617F437, N'Hoàng Văn Kho',       N'warehouse@schooldevice.vn',  N'0945678901', 4, GETDATE(), 1),
+(6, N'kttoan1',    0xAE89643A0C3ACD54155F5206DFC5FBBD21F4C1938DA618D0922FDA7BBDBEBD89, 0xF2D8A5150E59592AF777D637E9C1DC15, N'Ngô Thị Kế Toán',     N'accountant@schooldevice.vn', N'0956789012', 5, GETDATE(), 1),
+(7, N'sale3',      0xE36202513115FA3E078FA362FE64DC402A899CFDC46977DF41DEA13FC06C14E4, 0xD4618D350AA88A9FF96D04551D26D930, N'Vũ Minh Đức',         N'duc.vu@schooldevice.vn',     N'0967890123', 3, GETDATE(), 1),
+(8, N'manager2',   0x9BCCEF79FA1F8362FEE50549A13ECF9930A91AE7248A11FB11EA7BFEDA6BA6D5, 0x141522F59B86DE2B684852A93BF46669, N'Đỗ Anh Tuấn',        N'tuan.do@schooldevice.vn',    N'0978901234', 2, GETDATE(), 1);
 SET IDENTITY_INSERT Employees OFF;
 GO
 

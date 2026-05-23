@@ -23,6 +23,7 @@ namespace GUI.WinForms
             Dock = DockStyle.Fill;
             BackColor = UITheme.BackgroundColor;
             BuildLayout();
+            _grid.CellFormatting += Grid_CellFormatting;
             Load += (s, e) => RefreshGrid();
         }
 
@@ -37,7 +38,7 @@ namespace GUI.WinForms
             };
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 62F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 140F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 170F));
             root.Controls.Add(BuildToolbar(), 0, 0);
             root.Controls.Add(BuildGridCard(), 0, 1);
             root.Controls.Add(BuildDetailCard(), 0, 2);
@@ -213,6 +214,47 @@ namespace GUI.WinForms
                 {
                     AppLogger.Error("Delete promotion failed", ex);
                     UiDialogs.ShowError("Không thể xóa khuyến mãi.");
+                }
+            }
+        }
+
+        private void Grid_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+            {
+                var colName = _grid.Columns[e.ColumnIndex].Name;
+                if (colName == "Giá trị" && e.Value != null)
+                {
+                    var row = _grid.Rows[e.RowIndex];
+                    var type = row.Cells["Loại giảm giá"].Value?.ToString();
+                    if (decimal.TryParse(e.Value.ToString(), out decimal val))
+                    {
+                        if (type == "Phần trăm (%)")
+                        {
+                            e.Value = $"{val:N0}%";
+                        }
+                        else
+                        {
+                            e.Value = $"{val:N0} đ";
+                        }
+                        e.FormattingApplied = true;
+                    }
+                }
+                else if (colName == "Đơn tối thiểu" && e.Value != null)
+                {
+                    if (decimal.TryParse(e.Value.ToString(), out decimal val))
+                    {
+                        e.Value = $"{val:N0} đ";
+                        e.FormattingApplied = true;
+                    }
+                }
+                else if ((colName == "Ngày bắt đầu" || colName == "Ngày kết thúc") && e.Value != null)
+                {
+                    if (DateTime.TryParse(e.Value.ToString(), out DateTime date))
+                    {
+                        e.Value = date.ToString("dd/MM/yyyy");
+                        e.FormattingApplied = true;
+                    }
                 }
             }
         }

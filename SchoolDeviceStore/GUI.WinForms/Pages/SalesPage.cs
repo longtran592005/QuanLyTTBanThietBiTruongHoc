@@ -196,8 +196,8 @@ namespace GUI.WinForms
             {
                 Dock = DockStyle.Top,
                 ColumnCount = 1,
-                RowCount = 10,
-                Height = 460,
+                RowCount = 6,
+                Height = 360,
                 AutoSize = true,
                 BackColor = Color.Transparent
             };
@@ -206,11 +206,7 @@ namespace GUI.WinForms
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));  // VAT input
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));  // Payment status
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 8F));   // Separator
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));  // Subtotal label
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));  // Discount label
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));  // VAT label
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));  // Total
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));  // Payment status value
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));  // Summary grid
 
             var title = new Label
             {
@@ -234,22 +230,48 @@ namespace GUI.WinForms
             layout.Controls.Add(MakeComboField("Thanh toán", _paymentStatusCombo), 0, 3);
             layout.Controls.Add(separator, 0, 4);
 
-            _subtotalValueLabel.Font = UITheme.BodyBoldFont;
-            _discountValueLabel.Font = UITheme.BodyBoldFont;
-            _vatValueLabel.Font = UITheme.BodyBoldFont;
-            _totalValueLabel.Font = UITheme.TitleFont;
-            _paymentStatusValueLabel.Font = UITheme.BodyBoldFont;
-            _subtotalValueLabel.ForeColor = UITheme.TextSecondaryColor;
-            _discountValueLabel.ForeColor = UITheme.TextSecondaryColor;
-            _vatValueLabel.ForeColor = UITheme.TextSecondaryColor;
-            _totalValueLabel.ForeColor = UITheme.PrimaryColor;
-            _paymentStatusValueLabel.ForeColor = UITheme.SuccessColor;
+            var summaryGrid = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 5,
+                Height = 150,
+                BackColor = Color.Transparent
+            };
+            summaryGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55F));
+            summaryGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
+            summaryGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
+            summaryGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
+            summaryGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
+            summaryGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));
+            summaryGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
 
-            layout.Controls.Add(_subtotalValueLabel, 0, 5);
-            layout.Controls.Add(_discountValueLabel, 0, 6);
-            layout.Controls.Add(_vatValueLabel, 0, 7);
-            layout.Controls.Add(_totalValueLabel, 0, 8);
-            layout.Controls.Add(_paymentStatusValueLabel, 0, 9);
+            var subtotalTitle = new Label { Text = "Tạm tính", Dock = DockStyle.Fill, Font = UITheme.BaseFont, ForeColor = UITheme.TextSecondaryColor, TextAlign = ContentAlignment.MiddleLeft };
+            _subtotalValueLabel.Dock = DockStyle.Fill; _subtotalValueLabel.Font = UITheme.BodyBoldFont; _subtotalValueLabel.ForeColor = UITheme.TextPrimaryColor; _subtotalValueLabel.TextAlign = ContentAlignment.MiddleRight;
+            summaryGrid.Controls.Add(subtotalTitle, 0, 0);
+            summaryGrid.Controls.Add(_subtotalValueLabel, 1, 0);
+
+            var discountTitle = new Label { Text = "Chiết khấu", Dock = DockStyle.Fill, Font = UITheme.BaseFont, ForeColor = UITheme.TextSecondaryColor, TextAlign = ContentAlignment.MiddleLeft };
+            _discountValueLabel.Dock = DockStyle.Fill; _discountValueLabel.Font = UITheme.BodyBoldFont; _discountValueLabel.ForeColor = UITheme.TextPrimaryColor; _discountValueLabel.TextAlign = ContentAlignment.MiddleRight;
+            summaryGrid.Controls.Add(discountTitle, 0, 1);
+            summaryGrid.Controls.Add(_discountValueLabel, 1, 1);
+
+            var vatTitle = new Label { Text = "Thuế VAT", Dock = DockStyle.Fill, Font = UITheme.BaseFont, ForeColor = UITheme.TextSecondaryColor, TextAlign = ContentAlignment.MiddleLeft };
+            _vatValueLabel.Dock = DockStyle.Fill; _vatValueLabel.Font = UITheme.BodyBoldFont; _vatValueLabel.ForeColor = UITheme.TextPrimaryColor; _vatValueLabel.TextAlign = ContentAlignment.MiddleRight;
+            summaryGrid.Controls.Add(vatTitle, 0, 2);
+            summaryGrid.Controls.Add(_vatValueLabel, 1, 2);
+
+            var totalTitle = new Label { Text = "Tổng cộng", Dock = DockStyle.Fill, Font = UITheme.BodyBoldFont, ForeColor = UITheme.TextPrimaryColor, TextAlign = ContentAlignment.MiddleLeft };
+            _totalValueLabel.Dock = DockStyle.Fill; _totalValueLabel.Font = UITheme.TitleFont; _totalValueLabel.ForeColor = UITheme.PrimaryColor; _totalValueLabel.TextAlign = ContentAlignment.MiddleRight;
+            summaryGrid.Controls.Add(totalTitle, 0, 3);
+            summaryGrid.Controls.Add(_totalValueLabel, 1, 3);
+
+            var statusTitle = new Label { Text = "Thanh toán", Dock = DockStyle.Fill, Font = UITheme.BaseFont, ForeColor = UITheme.TextSecondaryColor, TextAlign = ContentAlignment.MiddleLeft };
+            _paymentStatusValueLabel.Dock = DockStyle.Fill; _paymentStatusValueLabel.Font = UITheme.BodyBoldFont; _paymentStatusValueLabel.ForeColor = UITheme.SuccessColor; _paymentStatusValueLabel.TextAlign = ContentAlignment.MiddleRight;
+            summaryGrid.Controls.Add(statusTitle, 0, 4);
+            summaryGrid.Controls.Add(_paymentStatusValueLabel, 1, 4);
+
+            layout.Controls.Add(summaryGrid, 0, 5);
 
             scrollPanel.Controls.Add(layout);
             return scrollPanel;
@@ -791,11 +813,11 @@ namespace GUI.WinForms
             var paymentStatus = string.IsNullOrWhiteSpace(_paymentStatusCombo.Text) ? "Đã thanh toán" : _paymentStatusCombo.Text;
 
             _itemCountLabel.Text = $"Số mặt hàng: {_cartLines.Count}";
-            _subtotalValueLabel.Text = $"Tạm tính: {subtotal:N0}";
-            _discountValueLabel.Text = $"Giảm giá: {discount:N0}";
-            _vatValueLabel.Text = $"VAT: {vatAmount:N0}";
-            _totalValueLabel.Text = $"Tổng cộng: {grandTotal:N0}";
-            _paymentStatusValueLabel.Text = $"Trạng thái thanh toán: {paymentStatus}";
+            _subtotalValueLabel.Text = $"{subtotal:N0} đ";
+            _discountValueLabel.Text = $"{discount:N0} đ";
+            _vatValueLabel.Text = $"{vatAmount:N0} đ";
+            _totalValueLabel.Text = $"{grandTotal:N0} đ";
+            _paymentStatusValueLabel.Text = paymentStatus;
             _statusLabel.Text = _cartLines.Count == 0 ? "Giỏ hàng trống." : "Hóa đơn nháp đã sẵn sàng.";
             _statusLabel.ForeColor = UITheme.TextSecondaryColor;
 

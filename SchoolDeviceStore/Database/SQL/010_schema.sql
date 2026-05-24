@@ -163,6 +163,8 @@ CREATE TABLE InventoryLogs (
     CONSTRAINT FK_InventoryLogs_Employees FOREIGN KEY(ChangedBy) REFERENCES Employees(EmployeeId)
 );
 
+CREATE INDEX IX_InventoryLogs_ProductId_ChangedAt ON InventoryLogs(ProductId, ChangedAt DESC);
+
 -- =============================================================
 -- Bang log he thong
 -- =============================================================

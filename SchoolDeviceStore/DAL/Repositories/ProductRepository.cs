@@ -65,6 +65,7 @@ VALUES (@code,@name,@cat,@man,@sup,@qty,@unit,@purch,@img,@desc,@status); SELECT
 
         public bool Update(Product p)
         {
+            var existing = GetById(p.ProductId);
             string sql = @"UPDATE Products SET ProductCode=@code, ProductName=@name, CategoryId=@cat, ManufacturerId=@man, SupplierId=@sup, Quantity=@qty, UnitPrice=@unit, PurchasePrice=@purch, ImagePath=@img, Description=@desc, Status=@status WHERE ProductId=@id";
             var parameters = new SQLiteParameter[]
             {
@@ -82,6 +83,14 @@ VALUES (@code,@name,@cat,@man,@sup,@qty,@unit,@purch,@img,@desc,@status); SELECT
                 new SQLiteParameter("@id", p.ProductId)
             };
             var affected = DAL.DbHelper.ExecuteNonQuery(sql, parameters);
+
+            if (affected > 0 && existing != null && existing.Quantity != p.Quantity)
+            {
+                var delta = p.Quantity - existing.Quantity;
+                var inventoryRepo = new InventoryLogRepository();
+                inventoryRepo.RecordChange(p.ProductId, delta, "Cập nhật sản phẩm", null);
+            }
+
             return affected > 0;
         }
 
@@ -106,10 +115,19 @@ VALUES (@code,@name,@cat,@man,@sup,@qty,@unit,@purch,@img,@desc,@status); SELECT
             return Convert.ToInt32(result) > 0;
         }
 
-        public bool UpdateQuantity(int productId, int newQuantity)
+        public bool UpdateQuantity(int productId, int newQuantity, int? changedBy = null, string reason = null)
         {
+            var existing = GetById(productId);
             string sql = "UPDATE Products SET Quantity = @q WHERE ProductId = @id";
             var affected = DAL.DbHelper.ExecuteNonQuery(sql, new SQLiteParameter("@q", newQuantity), new SQLiteParameter("@id", productId));
+
+            if (affected > 0 && existing != null && existing.Quantity != newQuantity)
+            {
+                var delta = newQuantity - existing.Quantity;
+                var inventoryRepo = new InventoryLogRepository();
+                inventoryRepo.RecordChange(productId, delta, reason ?? "Điều chỉnh tồn kho", changedBy);
+            }
+
             return affected > 0;
         }
 

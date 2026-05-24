@@ -76,7 +76,7 @@ namespace GUI.WinForms
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 13,
+                RowCount = 15,
                 BackColor = Color.Transparent
             };
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72F));  // Brand
@@ -88,6 +88,8 @@ namespace GUI.WinForms
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Suppliers
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Promotions
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Reports
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Inventory logs
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // System logs
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Employees
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Backup
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));  // Spacer
@@ -122,13 +124,15 @@ namespace GUI.WinForms
             AddSidebarButton(layout, 6, "suppliers", "  Nhà cung cấp", "\uE13F", () => LoadPage(GetSuppliersPage(), "Nhà cung cấp", "suppliers"));
             AddSidebarButton(layout, 7, "promotions", "  Khuyến mãi", "\uE248", () => LoadPage(GetPromotionsPage(), "Khuyến mãi", "promotions"));
             AddSidebarButton(layout, 8, "reports", "  Báo cáo", "\uE1D5", () => LoadPage(GetReportsPage(), "Báo cáo", "reports"));
-            AddSidebarButton(layout, 9, "employees", "  Nhân viên", "\uE13D", () => LoadPage(GetEmployeesPage(), "Quản lý nhân viên", "employees"));
+            AddSidebarButton(layout, 9, "inventory_logs", "  Lịch sử tồn kho", "\uE8A5", () => LoadPage(GetInventoryLogsPage(), "Lịch sử tồn kho", "inventory_logs"));
+            AddSidebarButton(layout, 10, "system_logs", "  Nhật ký hệ thống", "\uE81C", () => LoadPage(GetSystemLogsPage(), "Nhật ký hệ thống", "system_logs"));
+            AddSidebarButton(layout, 11, "employees", "  Nhân viên", "\uE13D", () => LoadPage(GetEmployeesPage(), "Quản lý nhân viên", "employees"));
 
             var backupButton = UIHelper.CreateSidebarButton("  Sao lưu / Khôi phục", "\uE114");
             backupButton.Name = "backup";
             backupButton.Tag = false;
             backupButton.Click += (s, e) => LoadPage(GetBackupPage(), "Sao lưu / Khôi phục", "backup");
-            layout.Controls.Add(backupButton, 0, 10);
+            layout.Controls.Add(backupButton, 0, 12);
             _navButtons["backup"] = backupButton;
 
             var logoutButton = UIHelper.CreateSidebarDangerButton("  Thoát hệ thống", "\uE106");
@@ -139,7 +143,7 @@ namespace GUI.WinForms
                 if (UiDialogs.Confirm("Bạn có chắc chắn muốn đăng xuất?\n\nMọi dữ liệu chưa lưu sẽ bị mất.", "Xác nhận đăng xuất"))
                     Close();
             };
-            layout.Controls.Add(logoutButton, 0, 12);
+            layout.Controls.Add(logoutButton, 0, 14);
 
             // Apply role-based visibility using centralized permission check
             ApplyRolePermissions(roleId);
@@ -158,6 +162,8 @@ namespace GUI.WinForms
             SetNavVisibility("suppliers", EmployeeService.HasPermission(roleId, "suppliers"));
             SetNavVisibility("promotions", EmployeeService.HasPermission(roleId, "promotions"));
             SetNavVisibility("reports", EmployeeService.HasPermission(roleId, "reports"));
+            SetNavVisibility("inventory_logs", EmployeeService.HasPermission(roleId, "inventory_logs"));
+            SetNavVisibility("system_logs", EmployeeService.HasPermission(roleId, "system_logs"));
             SetNavVisibility("employees", EmployeeService.HasPermission(roleId, "employees"));
             SetNavVisibility("backup", EmployeeService.HasPermission(roleId, "backup"));
             // Products and Dashboard are visible to all roles
@@ -408,7 +414,7 @@ namespace GUI.WinForms
 
         private ProductManagementPage GetProductsPage()
         {
-            return GetOrCreatePage("products", () => new ProductManagementPage());
+            return GetOrCreatePage("products", () => new ProductManagementPage(_currentUser));
         }
 
         private CategoryManagementPage GetCategoriesPage()
@@ -429,6 +435,16 @@ namespace GUI.WinForms
         private ReportsPage GetReportsPage()
         {
             return GetOrCreatePage("reports", () => new ReportsPage());
+        }
+
+        private SystemLogsPage GetSystemLogsPage()
+        {
+            return GetOrCreatePage("system_logs", () => new SystemLogsPage());
+        }
+
+        private InventoryLogsPage GetInventoryLogsPage()
+        {
+            return GetOrCreatePage("inventory_logs", () => new InventoryLogsPage());
         }
 
         private BackupRestorePage GetBackupPage()
@@ -482,6 +498,9 @@ namespace GUI.WinForms
                     break;
                 case "reports":
                     LoadPage(GetReportsPage(), "Báo cáo", "reports");
+                    break;
+                case "system_logs":
+                    LoadPage(GetSystemLogsPage(), "Nhật ký hệ thống", "system_logs");
                     break;
                 case "employees":
                     LoadPage(GetEmployeesPage(), "Quản lý nhân viên", "employees");

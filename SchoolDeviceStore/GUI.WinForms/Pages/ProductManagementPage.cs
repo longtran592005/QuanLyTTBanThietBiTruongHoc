@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows.Forms;
 using BLL;
 using DTO;
+using DAL.Repositories;
 
 namespace GUI.WinForms
 {
@@ -18,13 +19,19 @@ namespace GUI.WinForms
         private readonly ComboBox _statusFilter = new ComboBox();
         private readonly Label _recordCountLabel = new Label();
         private readonly Label _detailLabel = new Label();
+        private readonly DataGridView _logGrid = new DataGridView();
+        private readonly Button _logRefreshButton = new Button();
+        private int? _currentProductId = null;
+        private int _currentUserRoleId = 0;
         private readonly EmptyStateControl _emptyState = new EmptyStateControl();
         private List<Product> _items = new List<Product>();
 
-        public ProductManagementPage()
+        public ProductManagementPage(DTO.Employee currentUser = null)
         {
             Dock = DockStyle.Fill;
             BackColor = UITheme.BackgroundColor;
+            if (currentUser != null)
+                _currentUserRoleId = currentUser.RoleId;
             BuildLayout();
             LoadData();
         }
@@ -143,6 +150,10 @@ namespace GUI.WinForms
             split.Panel1.Padding = new Padding(0, 0, 12, 0);
             split.Panel1.Controls.Add(gridCard);
 
+            var detailTabs = new TabControl { Dock = DockStyle.Fill }; // will contain "Chi tiết" and "Lịch sử tồn kho"
+
+            // Chi tiết tab
+            var detailTab = new TabPage("Chi tiết");
             var detailCard = new Panel { Dock = DockStyle.Fill, BackColor = UITheme.SurfaceColor, Padding = new Padding(16) };
             UIHelper.StyleCard(detailCard);
             var title = new Label { Dock = DockStyle.Top, Height = 28, Text = "Chi tiết sản phẩm", Font = UITheme.SectionTitleFont, ForeColor = UITheme.TextPrimaryColor };
@@ -152,8 +163,94 @@ namespace GUI.WinForms
             _detailLabel.Text = "Chọn một sản phẩm để xem thông tin quản lý.";
             detailCard.Controls.Add(_detailLabel);
             detailCard.Controls.Add(title);
-            split.Panel2.Controls.Add(detailCard);
+            detailTab.Controls.Add(detailCard);
+
+            // Lịch sử tồn kho tab
+            var logTab = new TabPage("Lịch sử tồn kho");
+            var logPanelOuter = new Panel { Dock = DockStyle.Fill, BackColor = UITheme.SurfaceColor, Padding = new Padding(12) };
+            UIHelper.StyleCard(logPanelOuter);
+
+            // Top toolbar for log tab
+            var logToolbar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 42, FlowDirection = FlowDirection.LeftToRight, Padding = new Padding(0, 6, 0, 6) };
+            _logRefreshButton.Text = "Làm mới";
+            _logRefreshButton.Height = 30;
+            _logRefreshButton.Click += (s, e) => { if (_currentProductId.HasValue) LoadInventoryLogs(_currentProductId.Value); };
+            logToolbar.Controls.Add(_logRefreshButton);
+
+            // Grid
+            DataGridViewHelper.ApplyProfessionalStyle(_logGrid);
+            _logGrid.Dock = DockStyle.Fill;
+            _logGrid.ReadOnly = true;
+            _logGrid.AllowUserToAddRows = false;
+            _logGrid.AllowUserToDeleteRows = false;
+
+            logPanelOuter.Controls.Add(_logGrid);
+            logPanelOuter.Controls.Add(logToolbar);
+            logTab.Controls.Add(logPanelOuter);
+
+            detailTabs.TabPages.Add(detailTab);
+            if (EmployeeService.HasPermission(_currentUserRoleId, "inventory_logs"))
+                detailTabs.TabPages.Add(logTab);
+
+            // When switching to log tab, load logs for current product
+            detailTabs.SelectedIndexChanged += (s, e) =>
+            {
+                if (detailTabs.SelectedTab == logTab && _currentProductId.HasValue)
+                {
+                    LoadInventoryLogs(_currentProductId.Value);
+                }
+            };
+
+            split.Panel2.Controls.Add(detailTabs);
             return split;
+        }
+
+        private void LoadInventoryLogs(int productId)
+        {
+            try
+            {
+                var repo = new InventoryLogRepository();
+                var logs = repo.GetByProductId(productId);
+                var empService = new EmployeeService();
+                var emps = empService.GetAll().ToDictionary(x => x.EmployeeId, x => x.FullName);
+                var view = logs.Select(l => new
+                {
+                    ChangedAt = l.ChangedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                    Change = l.Change,
+                    Reason = l.Reason,
+                    ChangedBy = l.ChangedBy.HasValue ? (emps.TryGetValue(l.ChangedBy.Value, out var name) ? name : l.ChangedBy.Value.ToString()) : "-"
+                }).ToList();
+
+                _logGrid.DataSource = view;
+                _logGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+
+                if (_logGrid.Columns["ChangedAt"] != null)
+                {
+                    _logGrid.Columns["ChangedAt"].HeaderText = "Thời gian";
+                    _logGrid.Columns["ChangedAt"].FillWeight = 30F;
+                }
+                if (_logGrid.Columns["Change"] != null)
+                {
+                    _logGrid.Columns["Change"].HeaderText = "Thay đổi";
+                    _logGrid.Columns["Change"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                    _logGrid.Columns["Change"].FillWeight = 15F;
+                }
+                if (_logGrid.Columns["Reason"] != null)
+                {
+                    _logGrid.Columns["Reason"].HeaderText = "Lý do";
+                    _logGrid.Columns["Reason"].FillWeight = 40F;
+                }
+                if (_logGrid.Columns["ChangedBy"] != null)
+                {
+                    _logGrid.Columns["ChangedBy"].HeaderText = "Người thay đổi (ID)";
+                    _logGrid.Columns["ChangedBy"].FillWeight = 15F;
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Failed to load inventory logs", ex);
+                UiDialogs.ShowError("Không thể tải lịch sử tồn kho.");
+            }
         }
 
         private Control BuildFooter()

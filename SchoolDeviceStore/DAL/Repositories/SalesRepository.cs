@@ -61,6 +61,9 @@ VALUES (@orderId, @productId, @quantity, @unitPrice);", conn, tx))
                                 if (affected == 0)
                                     throw new InvalidOperationException("Insufficient stock for product ID " + item.ProductId);
                             }
+
+                            var inventoryRepo = new InventoryLogRepository();
+                            inventoryRepo.RecordChange(conn, tx, item.ProductId, -item.Quantity, "Bán hàng " + orderCode, createdBy);
                         }
 
                         tx.Commit();

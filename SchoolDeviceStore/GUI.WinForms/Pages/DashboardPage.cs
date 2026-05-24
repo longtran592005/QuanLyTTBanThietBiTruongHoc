@@ -34,19 +34,17 @@ namespace GUI.WinForms
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 4,
+                RowCount = 3,
                 BackColor = UITheme.BackgroundColor,
                 Padding = new Padding(0)
             };
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 48F));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 148F));
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             root.Controls.Add(BuildHeader(), 0, 0);
             root.Controls.Add(BuildKpiRow(), 0, 1);
-            root.Controls.Add(BuildMiddleRow(), 0, 2);
-            root.Controls.Add(BuildBottomRow(), 0, 3);
+            root.Controls.Add(BuildContentArea(), 0, 2);
 
             Controls.Add(root);
             Load += (s, e) => RefreshDashboard();
@@ -99,66 +97,39 @@ namespace GUI.WinForms
             return layout;
         }
 
-        private Control BuildMiddleRow()
+        private Control BuildContentArea()
         {
             var layout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                RowCount = 1,
+                RowCount = 2,
                 BackColor = UITheme.BackgroundColor,
                 Padding = new Padding(0, 12, 0, 0)
             };
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 68F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 64F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 58F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 42F));
 
             var chartCard = BuildChartCard("Xu hướng doanh thu", _revenueChart);
-            var rightStack = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 1,
-                BackColor = Color.Transparent,
-                Margin = new Padding(12, 0, 0, 0)
-            };
-            rightStack.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-
             var lowStockCard = BuildGridCard("Sản phẩm sắp hết hàng", _lowStockGrid);
-
-            rightStack.Controls.Add(lowStockCard, 0, 0);
+            var invoiceCard = BuildGridCard("Hóa đơn gần đây", _recentInvoicesGrid);
 
             layout.Controls.Add(chartCard, 0, 0);
-            layout.Controls.Add(rightStack, 1, 0);
-            return layout;
-        }
-
-        private Control BuildBottomRow()
-        {
-            var layout = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 2,
-                RowCount = 1,
-                BackColor = UITheme.BackgroundColor,
-                Padding = new Padding(0, 12, 0, 0)
-            };
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
-
-            var invoiceCard = BuildGridCard("Hóa đơn gần đây", _recentInvoicesGrid);
-            var noticeCard = BuildNoticeCard();
-
-            layout.Controls.Add(invoiceCard, 0, 0);
-            layout.Controls.Add(noticeCard, 1, 0);
+            layout.Controls.Add(lowStockCard, 1, 0);
+            layout.SetRowSpan(lowStockCard, 2);
+            layout.Controls.Add(invoiceCard, 0, 1);
             return layout;
         }
 
         private Control BuildChartCard(string title, Chart chart)
         {
-            var card = new Panel { Dock = DockStyle.Fill, BackColor = UITheme.SurfaceColor, Padding = new Padding(16) };
+            var card = new Panel { Dock = DockStyle.Fill, BackColor = UITheme.SurfaceColor, Padding = new Padding(16), MinimumSize = new Size(100, 260) };
             UIHelper.StyleCard(card);
             var titleLabel = new Label { Dock = DockStyle.Top, Height = 28, Text = title, Font = UITheme.SectionTitleFont, ForeColor = UITheme.TextPrimaryColor };
             chart.Dock = DockStyle.Fill;
+            chart.MinimumSize = new Size(100, 220);
             chart.BackColor = Color.White;
             chart.ChartAreas.Clear();
             chart.Series.Clear();
@@ -188,7 +159,7 @@ namespace GUI.WinForms
 
         private Control BuildGridCard(string title, DataGridView grid)
         {
-            var card = new Panel { Dock = DockStyle.Fill, BackColor = UITheme.SurfaceColor, Padding = new Padding(16) };
+            var card = new Panel { Dock = DockStyle.Fill, BackColor = UITheme.SurfaceColor, Padding = new Padding(16), MinimumSize = new Size(100, 180) };
             UIHelper.StyleCard(card);
             var titleLabel = new Label { Dock = DockStyle.Top, Height = 28, Text = title, Font = UITheme.SectionTitleFont, ForeColor = UITheme.TextPrimaryColor };
             UIHelper.StyleDataGridView(grid);
@@ -196,59 +167,6 @@ namespace GUI.WinForms
             card.Controls.Add(grid);
             card.Controls.Add(titleLabel);
             return card;
-        }
-
-        private Control BuildQuickActionCard()
-        {
-            var card = new Panel { Dock = DockStyle.Fill, BackColor = UITheme.SurfaceColor, Padding = new Padding(16) };
-            UIHelper.StyleCard(card);
-            var titleLabel = new Label { Dock = DockStyle.Top, Height = 28, Text = "Thao tác nhanh", Font = UITheme.SectionTitleFont, ForeColor = UITheme.TextPrimaryColor };
-            var flow = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                AutoScroll = true,
-                Padding = new Padding(0, 8, 0, 0)
-            };
-
-            flow.Controls.Add(CreateActionButton("Bán hàng mới", UITheme.PrimaryColor, () => _navigate?.Invoke("sales")));
-            flow.Controls.Add(CreateActionButton("Sản phẩm", UITheme.SuccessColor, () => _navigate?.Invoke("products")));
-            flow.Controls.Add(CreateActionButton("Báo cáo", UITheme.WarningColor, () => _navigate?.Invoke("reports")));
-            flow.Controls.Add(CreateActionButton("Sao lưu", UITheme.TextSecondaryColor, () => _navigate?.Invoke("backup")));
-
-            card.Controls.Add(flow);
-            card.Controls.Add(titleLabel);
-            return card;
-        }
-
-        private Control BuildNoticeCard()
-        {
-            var card = new Panel { Dock = DockStyle.Fill, BackColor = UITheme.SurfaceColor, Padding = new Padding(16) };
-            UIHelper.StyleCard(card);
-            var titleLabel = new Label { Dock = DockStyle.Top, Height = 28, Text = "Ghi chú vận hành", Font = UITheme.SectionTitleFont, ForeColor = UITheme.TextPrimaryColor };
-            var noticeLabel = new Label
-            {
-                Dock = DockStyle.Fill,
-                Font = UITheme.BaseFont,
-                ForeColor = UITheme.TextSecondaryColor,
-                Text = "Các tiện ích tổng quan nên lấy dữ liệu trực tiếp, sau đó mở rộng bằng cảnh báo, xu hướng và tùy chọn xuất file."
-            };
-            card.Controls.Add(noticeLabel);
-            card.Controls.Add(titleLabel);
-            return card;
-        }
-
-        private Button CreateActionButton(string text, Color color, Action action)
-        {
-            var button = UIHelper.CreatePrimaryButton(text);
-            button.BackColor = color;
-            button.FlatAppearance.BorderColor = color;
-            button.Width = 180;
-            button.Margin = new Padding(0, 0, 0, 8);
-            button.TextAlign = ContentAlignment.MiddleCenter;
-            button.Click += (s, e) => action();
-            return button;
         }
 
         private void RefreshDashboard()

@@ -35,6 +35,8 @@ namespace GUI.WinForms
         private ReportKpiData _currentKpi;
         private ReportKpiData _prevKpi;
 
+        private TabControl _tabControl;
+
         public ReportsPage()
         {
             Dock = DockStyle.Fill;
@@ -46,18 +48,50 @@ namespace GUI.WinForms
 
         private void BuildLayout()
         {
-            var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, BackColor = UITheme.BackgroundColor };
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));   // Quick filter
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 56F));   // Filter bar
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 110F));  // KPI cards
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 280F));  // Charts
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));   // Grids + alerts
-            root.Controls.Add(BuildQuickFilters(), 0, 0);
-            root.Controls.Add(BuildFilterBar(), 0, 1);
-            root.Controls.Add(BuildKpiCards(), 0, 2);
-            root.Controls.Add(BuildChartRow(), 0, 3);
-            root.Controls.Add(BuildGridRow(), 0, 4);
+            var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 1, BackColor = UITheme.BackgroundColor };
+            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            _tabControl = new TabControl
+            {
+                Dock = DockStyle.Fill,
+                Appearance = TabAppearance.Normal,
+                HotTrack = true,
+                Padding = new Point(14, 6)
+            };
+
+            var overviewTab = new TabPage("Tổng quan") { BackColor = UITheme.BackgroundColor, Padding = new Padding(0) };
+            var detailsTab = new TabPage("Chi tiết") { BackColor = UITheme.BackgroundColor, Padding = new Padding(0) };
+
+            overviewTab.Controls.Add(BuildOverviewLayout());
+            detailsTab.Controls.Add(BuildDetailsLayout());
+
+            _tabControl.TabPages.Add(overviewTab);
+            _tabControl.TabPages.Add(detailsTab);
+
+            root.Controls.Add(_tabControl, 0, 0);
             Controls.Add(root);
+        }
+
+        private Control BuildOverviewLayout()
+        {
+            var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, BackColor = UITheme.BackgroundColor, Padding = new Padding(0) };
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 56F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 110F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            layout.Controls.Add(BuildQuickFilters(), 0, 0);
+            layout.Controls.Add(BuildFilterBar(), 0, 1);
+            layout.Controls.Add(BuildKpiCards(), 0, 2);
+            layout.Controls.Add(BuildChartRow(), 0, 3);
+            return layout;
+        }
+
+        private Control BuildDetailsLayout()
+        {
+            var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 1, BackColor = UITheme.BackgroundColor, Padding = new Padding(0, 8, 0, 0) };
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            layout.Controls.Add(BuildGridRow(), 0, 0);
+            return layout;
         }
 
         // ── Quick Filter Buttons ──

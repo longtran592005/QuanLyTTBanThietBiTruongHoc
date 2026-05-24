@@ -294,12 +294,14 @@ namespace GUI.WinForms
             var passLabel = new Label { Dock = DockStyle.Fill, Text = "Mật khẩu", Font = UITheme.CaptionFont, ForeColor = UITheme.TextPrimaryColor, TextAlign = ContentAlignment.BottomLeft };
 
             _usernameBox = new TextBox { Visible = false }; // Keep for compatibility with existing _usernameBox ref
-            var userRounded = new RoundedTextBox { Dock = DockStyle.Fill, PlaceholderText = "Nhập tên tài khoản...", Margin = new Padding(0, 4, 0, 0) };
+            var userRounded = new RoundedTextBox { Dock = DockStyle.Fill, PlaceholderText = "Nhập tên tài khoản...", Margin = new Padding(0) };
             userRounded.TextChangedEvent += (s, e) => _usernameBox.Text = userRounded.Text;
+            var userField = BuildIconInputField("\uE716", userRounded, UITheme.PrimaryColor);
 
             _passwordBox = new TextBox { Visible = false }; // Keep for compatibility
-            var passRounded = new RoundedTextBox { Dock = DockStyle.Fill, PlaceholderText = "Nhập mật khẩu của bạn...", UseSystemPasswordChar = true, Margin = new Padding(0, 4, 0, 0) };
+            var passRounded = new RoundedTextBox { Dock = DockStyle.Fill, PlaceholderText = "Nhập mật khẩu của bạn...", UseSystemPasswordChar = true, Margin = new Padding(0) };
             passRounded.TextChangedEvent += (s, e) => _passwordBox.Text = passRounded.Text;
+            var passField = BuildIconInputField("\uE72E", passRounded, UITheme.TextSecondaryColor);
 
             _showPasswordCheckBox = new CheckBox { Dock = DockStyle.Fill, Text = "Hiển thị mật khẩu", ForeColor = UITheme.TextSecondaryColor, Font = UITheme.CaptionFont };
             _showPasswordCheckBox.CheckedChanged += (s, e) => passRounded.UseSystemPasswordChar = !_showPasswordCheckBox.Checked;
@@ -344,9 +346,9 @@ namespace GUI.WinForms
             container.Controls.Add(heading, 0, 0);
             container.Controls.Add(body, 0, 1);
             container.Controls.Add(userLabel, 0, 2);
-            container.Controls.Add(userRounded, 0, 3);
+            container.Controls.Add(userField, 0, 3);
             container.Controls.Add(passLabel, 0, 4);
-            container.Controls.Add(passRounded, 0, 5);
+            container.Controls.Add(passField, 0, 5);
             container.Controls.Add(_showPasswordCheckBox, 0, 6);
             container.Controls.Add(button, 0, 7);
             container.Controls.Add(exitButton, 0, 8);
@@ -392,6 +394,42 @@ namespace GUI.WinForms
         {
             card.Left = Math.Max(24, (parent.ClientSize.Width - card.Width) / 2);
             card.Top = Math.Max(24, (parent.ClientSize.Height - card.Height) / 2);
+        }
+
+        private Control BuildIconInputField(string iconChar, RoundedTextBox input, Color iconColor)
+        {
+            var wrapper = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0, 4, 0, 0),
+                MinimumSize = new Size(0, 40)
+            };
+
+            var iconLabel = new Label
+            {
+                Dock = DockStyle.Left,
+                Width = 42,
+                Text = iconChar,
+                Font = new Font("Segoe MDL2 Assets", 13F, FontStyle.Regular),
+                ForeColor = iconColor,
+                TextAlign = ContentAlignment.MiddleCenter,
+                BackColor = Color.Transparent
+            };
+
+            var fieldHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0)
+            };
+
+            input.Dock = DockStyle.Fill;
+            fieldHost.Controls.Add(input);
+
+            wrapper.Controls.Add(fieldHost);
+            wrapper.Controls.Add(iconLabel);
+            return wrapper;
         }
 
         private void BtnLogin_Click(object sender, EventArgs e)

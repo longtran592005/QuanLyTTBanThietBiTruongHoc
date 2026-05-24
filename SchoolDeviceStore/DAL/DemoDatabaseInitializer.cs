@@ -110,6 +110,17 @@ CREATE TABLE IF NOT EXISTS SalesOrderDetails (
     FOREIGN KEY(ProductId) REFERENCES Products(ProductId)
 );
 
+CREATE TABLE IF NOT EXISTS InventoryLogs (
+    InventoryLogId INTEGER PRIMARY KEY AUTOINCREMENT,
+    ProductId INTEGER NOT NULL,
+    Change INTEGER NOT NULL,
+    Reason TEXT,
+    ChangedBy INTEGER,
+    ChangedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(ProductId) REFERENCES Products(ProductId),
+    FOREIGN KEY(ChangedBy) REFERENCES Employees(EmployeeId)
+);
+
 CREATE TABLE IF NOT EXISTS Promotions (
     PromotionId INTEGER PRIMARY KEY AUTOINCREMENT,
     PromotionCode TEXT NOT NULL UNIQUE,

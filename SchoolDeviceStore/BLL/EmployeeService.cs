@@ -134,11 +134,17 @@ namespace BLL
                 case "reports":
                     return roleId == 1 || roleId == 2 || roleId == 5; // Admin, Manager, Accountant
 
+                case "system_logs":
+                    return roleId == 1; // Admin only
+
                 case "employees":
                     return roleId == 1; // Admin only
 
                 case "backup":
                     return roleId == 1; // Admin only
+
+                case "inventory_logs":
+                    return roleId == 1 || roleId == 2 || roleId == 4; // Admin, Manager, Warehouse
 
                 default:
                     return false;

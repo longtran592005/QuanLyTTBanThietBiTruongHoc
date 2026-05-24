@@ -172,6 +172,8 @@ CREATE TABLE InventoryLogs (
     CONSTRAINT FK_InventoryLogs_Employees FOREIGN KEY(ChangedBy) REFERENCES Employees(EmployeeId)
 );
 
+CREATE INDEX IX_InventoryLogs_ProductId_ChangedAt ON InventoryLogs(ProductId, ChangedAt DESC);
+
 -- 3.13. Bảng Nhật Ký Hệ Thống (AuditLogs)
 CREATE TABLE AuditLogs (
     LogId INT IDENTITY(1,1) PRIMARY KEY,

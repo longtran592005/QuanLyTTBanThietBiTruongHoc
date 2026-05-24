@@ -44,7 +44,7 @@ namespace DAL.Repositories
         public int Create(Product p)
         {
             string sql = @"INSERT INTO Products (ProductCode, ProductName, CategoryId, ManufacturerId, SupplierId, Quantity, UnitPrice, PurchasePrice, ImagePath, Description, Status)
-VALUES (@code,@name,@cat,@man,@sup,@qty,@unit,@purch,@img,@desc,@status); SELECT last_insert_rowid();";
+VALUES (@code,@name,@cat,@man,@sup,@qty,@unit,@purch,@img,@desc,@status); SELECT CAST(SCOPE_IDENTITY() AS int);";
             var parameters = new SQLiteParameter[]
             {
                 new SQLiteParameter("@code", p.ProductCode),

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
+using System.Data.SqlClient;
 using DTO;
 
 namespace DAL.Repositories
@@ -11,7 +12,7 @@ namespace DAL.Repositories
         public int RecordChange(int productId, int change, string reason, int? changedBy)
         {
             const string sql = @"INSERT INTO InventoryLogs (ProductId, Change, Reason, ChangedBy, ChangedAt)
-VALUES (@productId, @change, @reason, @changedBy, CURRENT_TIMESTAMP); SELECT last_insert_rowid();";
+VALUES (@productId, @change, @reason, @changedBy, CURRENT_TIMESTAMP); SELECT CAST(SCOPE_IDENTITY() AS int);";
 
             var id = DAL.DbHelper.ExecuteScalar(sql,
                 new SQLiteParameter("@productId", productId),
@@ -25,9 +26,24 @@ VALUES (@productId, @change, @reason, @changedBy, CURRENT_TIMESTAMP); SELECT las
         public int RecordChange(SQLiteConnection conn, SQLiteTransaction tx, int productId, int change, string reason, int? changedBy)
         {
             const string sql = @"INSERT INTO InventoryLogs (ProductId, Change, Reason, ChangedBy, ChangedAt)
-VALUES (@productId, @change, @reason, @changedBy, CURRENT_TIMESTAMP); SELECT last_insert_rowid();";
+VALUES (@productId, @change, @reason, @changedBy, CURRENT_TIMESTAMP); SELECT CAST(SCOPE_IDENTITY() AS int);";
 
             using (var cmd = new SQLiteCommand(sql, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@productId", productId);
+                cmd.Parameters.AddWithValue("@change", change);
+                cmd.Parameters.AddWithValue("@reason", (object)reason ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@changedBy", (object)changedBy ?? DBNull.Value);
+                return Convert.ToInt32(cmd.ExecuteScalar());
+            }
+        }
+
+        public int RecordChange(SqlConnection conn, SqlTransaction tx, int productId, int change, string reason, int? changedBy)
+        {
+            const string sql = @"INSERT INTO InventoryLogs (ProductId, Change, Reason, ChangedBy, ChangedAt)
+VALUES (@productId, @change, @reason, @changedBy, CURRENT_TIMESTAMP); SELECT CAST(SCOPE_IDENTITY() AS int);";
+
+            using (var cmd = new SqlCommand(sql, conn, tx))
             {
                 cmd.Parameters.AddWithValue("@productId", productId);
                 cmd.Parameters.AddWithValue("@change", change);
@@ -67,7 +83,7 @@ WHERE (@productId IS NULL OR ProductId = @productId)
   AND (@from IS NULL OR ChangedAt >= @from)
   AND (@to IS NULL OR ChangedAt <= @to)
 ORDER BY ChangedAt DESC, InventoryLogId DESC
-LIMIT @limit OFFSET @offset";
+OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
 
             var parameters = new List<SQLiteParameter>
             {

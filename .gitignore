@@ -274,6 +274,7 @@ ServiceFabricBackup/
 *.sqlite
 *.sqlite3
 *.db3
+*.mp4
 
 # Business Intelligence projects
 *.rdl.data

@@ -43,7 +43,7 @@ namespace DAL.Repositories
         {
             string sql = @"INSERT INTO Categories (CategoryName, Description)
 VALUES (@name, @desc);
-SELECT last_insert_rowid();";
+SELECT CAST(SCOPE_IDENTITY() AS int);";
             var id = DAL.DbHelper.ExecuteScalar(sql,
                 new SQLiteParameter("@name", category.CategoryName),
                 new SQLiteParameter("@desc", (object)category.Description ?? DBNull.Value));

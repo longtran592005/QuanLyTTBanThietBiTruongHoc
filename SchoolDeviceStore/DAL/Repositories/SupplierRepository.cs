@@ -49,7 +49,7 @@ namespace DAL.Repositories
         {
             string sql = @"INSERT INTO Suppliers (SupplierName, ContactName, Phone, Email, Address)
 VALUES (@name, @contact, @phone, @email, @address);
-SELECT last_insert_rowid();";
+SELECT CAST(SCOPE_IDENTITY() AS int);";
             var id = DAL.DbHelper.ExecuteScalar(sql,
                 new SQLiteParameter("@name", supplier.SupplierName),
                 new SQLiteParameter("@contact", (object)supplier.ContactName ?? DBNull.Value),

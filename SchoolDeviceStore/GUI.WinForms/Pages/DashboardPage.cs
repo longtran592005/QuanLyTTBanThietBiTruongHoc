@@ -171,8 +171,8 @@ namespace GUI.WinForms
 
         private void RefreshDashboard()
         {
-            var revenue = DbHelper.ExecuteScalar("SELECT IFNULL(SUM(TotalAmount),0) FROM SalesOrders WHERE date(OrderDate) >= date('now','-30 day')");
-            var salesCount = DbHelper.ExecuteScalar("SELECT COUNT(1) FROM SalesOrders WHERE date(OrderDate) >= date('now','-30 day')");
+            var revenue = DbHelper.ExecuteScalar("SELECT ISNULL(SUM(TotalAmount),0) FROM SalesOrders WHERE OrderDate >= DATEADD(day,-30,GETDATE())");
+            var salesCount = DbHelper.ExecuteScalar("SELECT COUNT(1) FROM SalesOrders WHERE OrderDate >= DATEADD(day,-30,GETDATE())");
             var productsCount = DbHelper.ExecuteScalar("SELECT COUNT(1) FROM Products");
             var lowStockCount = DbHelper.ExecuteScalar("SELECT COUNT(1) FROM Products WHERE Quantity <= 5");
 
@@ -189,7 +189,7 @@ namespace GUI.WinForms
                 revenueSeries.Points.AddXY(Convert.ToDateTime(row["ReportDate"]).ToString("dd/MM"), Convert.ToDecimal(row["Revenue"]));
             }
 
-            _lowStockGrid.DataSource = DbHelper.ExecuteQuery("SELECT ProductName, Quantity FROM Products WHERE Quantity <= 5 ORDER BY Quantity ASC, ProductName ASC LIMIT 10");
+            _lowStockGrid.DataSource = DbHelper.ExecuteQuery("SELECT TOP 10 ProductName, Quantity FROM Products WHERE Quantity <= 5 ORDER BY Quantity ASC, ProductName ASC");
             if (_lowStockGrid.Columns.Count >= 2)
             {
                 _lowStockGrid.Columns["ProductName"].HeaderText = "Sản phẩm";
@@ -199,7 +199,7 @@ namespace GUI.WinForms
                 _lowStockGrid.Columns["Quantity"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             }
 
-            _recentInvoicesGrid.DataSource = DbHelper.ExecuteQuery("SELECT SalesOrderCode, datetime(OrderDate) AS OrderDate, TotalAmount FROM SalesOrders ORDER BY datetime(OrderDate) DESC LIMIT 10");
+            _recentInvoicesGrid.DataSource = DbHelper.ExecuteQuery("SELECT TOP 10 SalesOrderCode, OrderDate, TotalAmount FROM SalesOrders ORDER BY OrderDate DESC");
             if (_recentInvoicesGrid.Columns.Count >= 3)
             {
                 _recentInvoicesGrid.Columns["SalesOrderCode"].HeaderText = "Mã hóa đơn";

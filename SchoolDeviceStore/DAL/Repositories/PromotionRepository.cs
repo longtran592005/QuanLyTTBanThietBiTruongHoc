@@ -30,11 +30,11 @@ namespace DAL.Repositories
                            DiscountValue AS 'Giá trị',
                            MinOrderAmount AS 'Đơn tối thiểu',
                            StartDate AS 'Ngày bắt đầu', EndDate AS 'Ngày kết thúc',
-                           CASE WHEN UsageLimit IS NULL THEN 'Không giới hạn' ELSE (UsageCount || '/' || UsageLimit) END AS 'Sử dụng',
+                           CASE WHEN UsageLimit IS NULL THEN 'Không giới hạn' ELSE (CAST(UsageCount AS nvarchar(20)) + '/' + CAST(UsageLimit AS nvarchar(20))) END AS 'Sử dụng',
                            CASE 
                                WHEN IsActive = 0 THEN 'Ngừng hoạt động'
-                               WHEN date('now') < date(StartDate) THEN 'Sắp diễn ra'
-                               WHEN date('now') > date(EndDate) THEN 'Đã hết hạn'
+                               WHEN CAST(GETDATE() AS date) < CAST(StartDate AS date) THEN 'Sắp diễn ra'
+                               WHEN CAST(GETDATE() AS date) > CAST(EndDate AS date) THEN 'Đã hết hạn'
                                WHEN UsageLimit IS NOT NULL AND UsageCount >= UsageLimit THEN 'Đã hết lượt'
                                ELSE 'Đang hoạt động'
                            END AS 'Trạng thái'
@@ -62,8 +62,8 @@ namespace DAL.Repositories
         {
             string sql = @"SELECT * FROM Promotions 
                            WHERE IsActive = 1 
-                           AND date('now') >= date(StartDate) 
-                           AND date('now') <= date(EndDate)
+                           AND CAST(GETDATE() AS date) >= CAST(StartDate AS date) 
+                           AND CAST(GETDATE() AS date) <= CAST(EndDate AS date)
                            AND (UsageLimit IS NULL OR UsageCount < UsageLimit)
                            ORDER BY PromotionName";
             var dt = DAL.DbHelper.ExecuteQuery(sql);
@@ -82,7 +82,7 @@ namespace DAL.Repositories
                            AppliesTo, ApplyTargetId, CreatedBy, CreatedAt)
                            VALUES (@code, @name, @desc, @discountType, @discountValue, @minOrder, @maxDiscount,
                            @startDate, @endDate, @usageLimit, 0, @isActive, @appliesTo, @applyTargetId, @createdBy, CURRENT_TIMESTAMP);
-                           SELECT last_insert_rowid();";
+                           SELECT CAST(SCOPE_IDENTITY() AS int);";
             var idObj = DAL.DbHelper.ExecuteScalar(sql,
                 new SQLiteParameter("@code", promo.PromotionCode),
                 new SQLiteParameter("@name", promo.PromotionName),

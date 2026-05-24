@@ -90,7 +90,7 @@ namespace DAL.Repositories
             string sql = @"
 INSERT INTO Employees (Username, PasswordHash, PasswordSalt, FullName, Email, Phone, RoleId, CreatedAt, IsActive)
 VALUES (@username, @hash, @salt, @fullname, @email, @phone, @roleId, CURRENT_TIMESTAMP, @isActive);
-SELECT last_insert_rowid();";
+SELECT CAST(SCOPE_IDENTITY() AS int);";
             var p = new SQLiteParameter[]
             {
                 new SQLiteParameter("@username", emp.Username),

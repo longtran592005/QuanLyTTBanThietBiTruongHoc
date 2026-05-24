@@ -1,6 +1,7 @@
 using System;
 using System.Configuration;
 using System.IO;
+using System.Data.SqlClient;
 
 namespace BLL
 {
@@ -9,6 +10,12 @@ namespace BLL
         public void BackupDatabase(string backupFilePath)
         {
             if (string.IsNullOrWhiteSpace(backupFilePath)) throw new ArgumentException("Backup file path is required.");
+
+            if (IsSqlServerConfigured())
+            {
+                BackupSqlServerDatabase(backupFilePath);
+                return;
+            }
 
             var databaseFilePath = GetDatabaseFilePath();
             if (!File.Exists(databaseFilePath))
@@ -25,6 +32,12 @@ namespace BLL
         {
             if (string.IsNullOrWhiteSpace(backupFilePath)) throw new ArgumentException("Backup file path is required.");
             if (!File.Exists(backupFilePath)) throw new FileNotFoundException("Backup file not found.", backupFilePath);
+
+            if (IsSqlServerConfigured())
+            {
+                RestoreSqlServerDatabase(backupFilePath);
+                return;
+            }
 
             var databaseFilePath = GetDatabaseFilePath();
             var databaseDirectory = Path.GetDirectoryName(databaseFilePath);
@@ -61,6 +74,61 @@ namespace BLL
             }
 
             throw new InvalidOperationException("Unable to determine SQLite database file path from connection string.");
+        }
+
+        private static bool IsSqlServerConfigured()
+        {
+            var provider = ConfigurationManager.ConnectionStrings["SchoolDeviceStoreDB"]?.ProviderName ?? string.Empty;
+            return provider.IndexOf("SqlClient", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static void BackupSqlServerDatabase(string backupFilePath)
+        {
+            var cs = ConfigurationManager.ConnectionStrings["SchoolDeviceStoreDB"]?.ConnectionString;
+            if (string.IsNullOrWhiteSpace(cs))
+                throw new InvalidOperationException("Missing SQL Server connection string.");
+
+            var builder = new SqlConnectionStringBuilder(cs);
+            var databaseName = builder.InitialCatalog;
+            if (string.IsNullOrWhiteSpace(databaseName))
+                throw new InvalidOperationException("SQL Server connection string must include Initial Catalog.");
+
+            var backupDirectory = Path.GetDirectoryName(backupFilePath);
+            if (!string.IsNullOrWhiteSpace(backupDirectory) && !Directory.Exists(backupDirectory))
+                Directory.CreateDirectory(backupDirectory);
+
+            using (var conn = new SqlConnection(cs))
+            using (var cmd = conn.CreateCommand())
+            {
+                conn.Open();
+                cmd.CommandText = $"BACKUP DATABASE [{databaseName}] TO DISK = @path WITH INIT, COPY_ONLY";
+                cmd.Parameters.AddWithValue("@path", backupFilePath);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        private static void RestoreSqlServerDatabase(string backupFilePath)
+        {
+            var cs = ConfigurationManager.ConnectionStrings["SchoolDeviceStoreDB"]?.ConnectionString;
+            if (string.IsNullOrWhiteSpace(cs))
+                throw new InvalidOperationException("Missing SQL Server connection string.");
+
+            var builder = new SqlConnectionStringBuilder(cs);
+            var databaseName = builder.InitialCatalog;
+            if (string.IsNullOrWhiteSpace(databaseName))
+                throw new InvalidOperationException("SQL Server connection string must include Initial Catalog.");
+
+            using (var conn = new SqlConnection(builder.ConnectionString.Replace($"Initial Catalog={databaseName}", "Initial Catalog=master")))
+            using (var cmd = conn.CreateCommand())
+            {
+                conn.Open();
+                cmd.CommandText = $@"
+ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+RESTORE DATABASE [{databaseName}] FROM DISK = @path WITH REPLACE;
+ALTER DATABASE [{databaseName}] SET MULTI_USER;";
+                cmd.Parameters.AddWithValue("@path", backupFilePath);
+                cmd.ExecuteNonQuery();
+            }
         }
     }
 }

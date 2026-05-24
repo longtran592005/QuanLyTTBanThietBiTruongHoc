@@ -1,4 +1,5 @@
 using System;
+using System.Configuration;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -129,6 +130,18 @@ namespace SchoolDeviceStore.Tests
                 testsFailed++;
             }
 
+            try
+            {
+                TestReportQueries();
+                Console.WriteLine("  ✓ Test 9: Report query integration\n");
+                testsPassed++;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  ✗ Test 9 FAILED: {ex.Message}\n");
+                testsFailed++;
+            }
+
             // Summary
             Console.WriteLine("╔═══════════════════════════════════════════════════════════╗");
             if (testsFailed == 0)
@@ -137,7 +150,7 @@ namespace SchoolDeviceStore.Tests
             }
             else
             {
-                Console.WriteLine($"║  Tests Passed: {testsPassed}/8 | Tests Failed: {testsFailed}/8          ║");
+                Console.WriteLine($"║  Tests Passed: {testsPassed}/9 | Tests Failed: {testsFailed}/9          ║");
             }
             Console.WriteLine("╚═══════════════════════════════════════════════════════════╝\n");
 
@@ -158,6 +171,15 @@ namespace SchoolDeviceStore.Tests
             var setupService = new DatabaseSetupService();
             setupService.EnsureDemoDatabaseReady();
             
+            var provider = ConfigurationManager.ConnectionStrings["SchoolDeviceStoreDB"]?.ProviderName ?? string.Empty;
+            if (provider.IndexOf("SqlClient", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                var dbName = Convert.ToString(DAL.DbHelper.ExecuteScalar("SELECT DB_NAME()"));
+                if (string.IsNullOrWhiteSpace(dbName))
+                    throw new Exception("Unable to query SQL Server database name");
+                return;
+            }
+
             var dbPath = GetDatabasePath();
             if (!File.Exists(dbPath))
                 throw new Exception($"Database file not found at {dbPath}");
@@ -314,7 +336,8 @@ namespace SchoolDeviceStore.Tests
             var backupService = new BackupService();
             var backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BackupTest");
             Directory.CreateDirectory(backupDir);
-            var backupPath = Path.Combine(backupDir, "TestBackup.db");
+            var provider = ConfigurationManager.ConnectionStrings["SchoolDeviceStoreDB"]?.ProviderName ?? string.Empty;
+            var backupPath = Path.Combine(backupDir, provider.IndexOf("SqlClient", StringComparison.OrdinalIgnoreCase) >= 0 ? "TestBackup.bak" : "TestBackup.db");
             
             try
             {
@@ -331,6 +354,29 @@ namespace SchoolDeviceStore.Tests
                 if (Directory.Exists(backupDir))
                     Directory.Delete(backupDir, true);
             }
+        }
+
+        static void TestReportQueries()
+        {
+            var reportService = new ReportService();
+            var toDate = DateTime.Today;
+            var fromDate = toDate.AddDays(-30);
+
+            var kpis = reportService.GetKpis(fromDate, toDate);
+            if (kpis == null)
+                throw new Exception("GetKpis returned null");
+
+            var revenueByDay = reportService.GetRevenueByDay(fromDate, toDate);
+            if (revenueByDay == null)
+                throw new Exception("GetRevenueByDay returned null");
+
+            var topProducts = reportService.GetTopProducts(fromDate, toDate);
+            if (topProducts == null)
+                throw new Exception("GetTopProducts returned null");
+
+            Console.WriteLine($"  • Revenue rows: {revenueByDay.Rows.Count}");
+            Console.WriteLine($"  • Top product rows: {topProducts.Rows.Count}");
+            Console.WriteLine($"  • KPI revenue: {kpis.TotalRevenue}");
         }
 
         static string GetDatabasePath()

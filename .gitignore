@@ -252,6 +252,7 @@ ClientBin/
 *.pfx
 *.publishsettings
 orleans.codegen.cs
+*.mp4
 
 # RIA/Silverlight projects
 Generated_Code/
@@ -274,7 +275,6 @@ ServiceFabricBackup/
 *.sqlite
 *.sqlite3
 *.db3
-*.mp4
 
 # Business Intelligence projects
 *.rdl.data
@@ -409,6 +409,4 @@ FodyWeavers.xsd
 
 # Rider/JetBrains IDEs
 .idea/
-
-.mp4
 

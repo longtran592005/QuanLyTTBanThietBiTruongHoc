@@ -99,13 +99,13 @@ namespace GUI.WinForms
             filterLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130F));
             filterLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F));
 
-            _searchBox.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            _searchBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _searchBox.Height = 36;
             UIHelper.StyleTextBox(_searchBox);
             UIHelper.SetPlaceholder(_searchBox, "🔍 Tìm kiếm sản phẩm...");
             _searchBox.TextChanged += (s, e) => ApplyFilters();
 
-            _statusFilter.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            _statusFilter.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _statusFilter.Height = 36;
             _statusFilter.DropDownStyle = ComboBoxStyle.DropDownList;
             UIHelper.StyleTextBox(_statusFilter);
@@ -114,7 +114,7 @@ namespace GUI.WinForms
             _statusFilter.SelectedIndexChanged += (s, e) => ApplyFilters();
 
             var exportCsvButton = UIHelper.CreateSecondaryButton("Xuất CSV");
-            exportCsvButton.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            exportCsvButton.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             exportCsvButton.Height = 36;
             exportCsvButton.Click += (s, e) => ExportHelper.ExportDataGridViewToCsv(_grid, "products.csv");
 

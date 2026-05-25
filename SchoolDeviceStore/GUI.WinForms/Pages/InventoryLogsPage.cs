@@ -54,8 +54,12 @@ namespace GUI.WinForms
             _productFilter.DropDownStyle = ComboBoxStyle.DropDownList;
             _fromPicker.Format = DateTimePickerFormat.Custom;
             _fromPicker.CustomFormat = "yyyy-MM-dd";
+            _fromPicker.ShowCheckBox = true;
+            _fromPicker.Checked = false;
             _toPicker.Format = DateTimePickerFormat.Custom;
             _toPicker.CustomFormat = "yyyy-MM-dd";
+            _toPicker.ShowCheckBox = true;
+            _toPicker.Checked = false;
             _refreshButton.Text = "Lọc";
             _refreshButton.Click += (s, e) => { _page = 1; LoadLogs(); };
 
@@ -118,8 +122,8 @@ namespace GUI.WinForms
                     productId = (int?)prop.GetValue(_productFilter.SelectedItem);
                 }
 
-                DateTime? from = _fromPicker.Value.Date;
-                DateTime? to = _toPicker.Value.Date.AddDays(1).AddSeconds(-1);
+                DateTime? from = _fromPicker.Checked ? _fromPicker.Value.Date : (DateTime?)null;
+                DateTime? to = _toPicker.Checked ? _toPicker.Value.Date.AddDays(1).AddSeconds(-1) : (DateTime?)null;
 
                 var offset = (_page - 1) * PageSize;
                 _totalCount = _repo.GetCountByFilter(productId, from, to);

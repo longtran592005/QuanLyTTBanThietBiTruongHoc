@@ -24,6 +24,8 @@ namespace GUI.WinForms
         private readonly DateTimePicker _fromPicker = new DateTimePicker();
         private readonly DateTimePicker _toPicker = new DateTimePicker();
         private readonly Button _refreshButton = new Button();
+        private readonly Button _clearButton = new Button();
+        private readonly CheckBox _enableDateFilter = new CheckBox();
         private readonly DataGridView _grid = new DataGridView();
         private readonly Button _prevButton = new Button();
         private readonly Button _nextButton = new Button();
@@ -54,22 +56,63 @@ namespace GUI.WinForms
             _productFilter.DropDownStyle = ComboBoxStyle.DropDownList;
             _fromPicker.Format = DateTimePickerFormat.Custom;
             _fromPicker.CustomFormat = "yyyy-MM-dd";
-            _fromPicker.ShowCheckBox = true;
-            _fromPicker.Checked = false;
+            _fromPicker.ShowCheckBox = false;
             _toPicker.Format = DateTimePickerFormat.Custom;
             _toPicker.CustomFormat = "yyyy-MM-dd";
-            _toPicker.ShowCheckBox = true;
-            _toPicker.Checked = false;
+            _toPicker.ShowCheckBox = false;
+            // Master enable checkbox
+            _enableDateFilter.Text = "Lọc theo ngày";
+            _enableDateFilter.AutoSize = true;
+            _enableDateFilter.Checked = false;
+            _enableDateFilter.CheckedChanged += (s, e) =>
+            {
+                var enabled = _enableDateFilter.Checked;
+                _fromPicker.Enabled = enabled;
+                _toPicker.Enabled = enabled;
+            };
             _refreshButton.Text = "Lọc";
-            _refreshButton.Click += (s, e) => { _page = 1; LoadLogs(); };
+            _refreshButton.Click += (s, e) =>
+            {
+                // Require enabling date filter before attempting to filter by date
+                if (!_enableDateFilter.Checked)
+                {
+                    UiDialogs.ShowWarning("Vui lòng tích 'Lọc theo ngày' trước khi bấm Lọc.");
+                    return;
+                }
+
+                // Validate date range
+                var from = _fromPicker.Value.Date;
+                var to = _toPicker.Value.Date;
+                if (to < from)
+                {
+                    UiDialogs.ShowError("Ngày 'Đến' phải không được nhỏ hơn ngày 'Từ'. Vui lòng chọn lại.");
+                    return;
+                }
+
+                _page = 1;
+                LoadLogs();
+            };
+
+            _clearButton.Text = "Làm mới";
+            _clearButton.Click += (s, e) =>
+            {
+                _productFilter.SelectedIndex = 0;
+                _enableDateFilter.Checked = false;
+                _fromPicker.Value = DateTime.Today.AddDays(-7);
+                _toPicker.Value = DateTime.Today;
+                _page = 1;
+                LoadLogs();
+            };
 
             toolbar.Controls.Add(new Label { Text = "Sản phẩm:", AutoSize = true, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(6,8,0,0) });
             toolbar.Controls.Add(_productFilter);
+            toolbar.Controls.Add(_enableDateFilter);
             toolbar.Controls.Add(new Label { Text = "Từ:", AutoSize = true, Padding = new Padding(6,8,0,0) });
             toolbar.Controls.Add(_fromPicker);
             toolbar.Controls.Add(new Label { Text = "Đến:", AutoSize = true, Padding = new Padding(6,8,0,0) });
             toolbar.Controls.Add(_toPicker);
             toolbar.Controls.Add(_refreshButton);
+            toolbar.Controls.Add(_clearButton);
 
             // Grid
             DataGridViewHelper.ApplyProfessionalStyle(_grid);
@@ -122,8 +165,8 @@ namespace GUI.WinForms
                     productId = (int?)prop.GetValue(_productFilter.SelectedItem);
                 }
 
-                DateTime? from = _fromPicker.Checked ? _fromPicker.Value.Date : (DateTime?)null;
-                DateTime? to = _toPicker.Checked ? _toPicker.Value.Date.AddDays(1).AddSeconds(-1) : (DateTime?)null;
+                DateTime? from = _enableDateFilter.Checked ? _fromPicker.Value.Date : (DateTime?)null;
+                DateTime? to = _enableDateFilter.Checked ? _toPicker.Value.Date.AddDays(1).AddSeconds(-1) : (DateTime?)null;
 
                 var offset = (_page - 1) * PageSize;
                 _totalCount = _repo.GetCountByFilter(productId, from, to);

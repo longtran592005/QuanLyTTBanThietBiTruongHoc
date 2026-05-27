@@ -26,17 +26,17 @@ namespace DAL.Repositories
         public DataTable GetAllAsDataTable()
         {
             string sql = @"SELECT PromotionId AS 'Mã KM', PromotionCode AS 'Mã code', PromotionName AS 'Tên chương trình',
-                           CASE DiscountType WHEN 'Percentage' THEN 'Phần trăm (%)' ELSE 'Số tiền cố định' END AS 'Loại giảm giá',
+                           CASE DiscountType WHEN 'Percentage' THEN N'Phần trăm (%)' ELSE N'Số tiền cố định' END AS 'Loại giảm giá',
                            DiscountValue AS 'Giá trị',
                            MinOrderAmount AS 'Đơn tối thiểu',
                            StartDate AS 'Ngày bắt đầu', EndDate AS 'Ngày kết thúc',
-                           CASE WHEN UsageLimit IS NULL THEN 'Không giới hạn' ELSE (CAST(UsageCount AS nvarchar(20)) + '/' + CAST(UsageLimit AS nvarchar(20))) END AS 'Sử dụng',
+                           CASE WHEN UsageLimit IS NULL THEN N'Không giới hạn' ELSE (CAST(UsageCount AS nvarchar(20)) + '/' + CAST(UsageLimit AS nvarchar(20))) END AS 'Sử dụng',
                            CASE 
-                               WHEN IsActive = 0 THEN 'Ngừng hoạt động'
-                               WHEN CAST(GETDATE() AS date) < CAST(StartDate AS date) THEN 'Sắp diễn ra'
-                               WHEN CAST(GETDATE() AS date) > CAST(EndDate AS date) THEN 'Đã hết hạn'
-                               WHEN UsageLimit IS NOT NULL AND UsageCount >= UsageLimit THEN 'Đã hết lượt'
-                               ELSE 'Đang hoạt động'
+                               WHEN IsActive = 0 THEN N'Ngừng hoạt động'
+                               WHEN CAST(GETDATE() AS date) < CAST(StartDate AS date) THEN N'Sắp diễn ra'
+                               WHEN CAST(GETDATE() AS date) > CAST(EndDate AS date) THEN N'Đã hết hạn'
+                               WHEN UsageLimit IS NOT NULL AND UsageCount >= UsageLimit THEN N'Đã hết lượt'
+                               ELSE N'Đang hoạt động'
                            END AS 'Trạng thái'
                            FROM Promotions ORDER BY CreatedAt DESC";
             return DAL.DbHelper.ExecuteQuery(sql);

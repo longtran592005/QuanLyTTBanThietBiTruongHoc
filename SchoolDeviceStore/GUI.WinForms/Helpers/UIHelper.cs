@@ -483,7 +483,7 @@ namespace GUI.WinForms
             {
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-                using (var font = new Font("Segoe UI Symbol", 12F, FontStyle.Regular))
+                using (var font = new Font("Segoe MDL2 Assets", 12F, FontStyle.Regular))
                 using (var brush = new SolidBrush(color))
                 {
                     var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };

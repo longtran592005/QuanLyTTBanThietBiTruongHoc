@@ -11,100 +11,168 @@
 **Sinh viên thực hiện:** Nguyễn Văn A  
 **Mã sinh viên:** 20195001  
 **Lớp:** ĐH20 – CNTT  
-**Ngành:** Công nghệ thông tin  
-**Khóa đào tạo:** 2019 – 2023  
-**Giảng viên hướng dẫn:** ThS. Trần Thị Bích
+## CHƯƠNG 3: CÀI ĐẶT CÁC CHỨC NĂNG CỦA HỆ THỐNG VÀ THỬ NGHIỆM CHƯƠNG TRÌNH
 
-**Thái Bình, tháng 05 năm 2026**
+### 3.1. Mã nguồn cài đặt một số chức năng chính
 
----
+Phần này trình bày trực tiếp các đoạn mã triển khai một số chức năng then chốt dựa trên codebase thực tế, kèm theo phân tích ngắn về hành vi, điều kiện trước/sau (pre/post-conditions) và lý do thiết kế.
 
-## LỜI CAM ĐOAN
+#### 3.1.1. Chức năng Nhập liệu (thêm / sửa / xóa sản phẩm)
 
-Tôi xin cam đoan đây là bài tiểu luận do bản thân tự thực hiện trên cơ sở tìm hiểu tài liệu, khảo sát thực tế và tổng hợp kiến thức đã học trong quá trình học tập. Những nội dung tham khảo từ nguồn bên ngoài đều được trình bày trung thực trong phần tài liệu tham khảo. Tôi xin chịu trách nhiệm về tính chính xác của toàn bộ nội dung trong bài.
+Đây là các phương thức trong `ProductService` chịu trách nhiệm kiểm tra và chuyển tiếp yêu cầu tới lớp DAL. Đoạn mã sao chép nguyên văn từ `BLL/ProductService.cs`:
 
-## LỜI CẢM ƠN
+```csharp
+public int Create(Product p)
+{
+    ValidateProduct(p, isNew: true);
+    if (_repo.ExistsByCode(p.ProductCode))
+        throw new ArgumentException("Product code already exists.");
+    return _repo.Create(p);
+}
 
-Trước hết, tôi xin gửi lời cảm ơn chân thành đến giảng viên hướng dẫn đã tận tình góp ý, định hướng và hỗ trợ tôi trong suốt quá trình thực hiện tiểu luận. Bên cạnh đó, tôi cũng xin cảm ơn thầy cô trong khoa đã trang bị cho tôi nền tảng kiến thức cần thiết để có thể tiếp cận đề tài một cách nghiêm túc và có hệ thống. Tôi cũng trân trọng cảm ơn những người đã hỗ trợ tôi trong quá trình khảo sát, góp ý và cung cấp thông tin thực tế để bài viết được hoàn thiện hơn.
+public bool Update(Product p)
+{
+    ValidateProduct(p, isNew: false);
+    if (p.ProductId <= 0) throw new ArgumentException("Invalid product id");
+    if (_repo.ExistsByCodeExceptId(p.ProductCode, p.ProductId))
+        throw new ArgumentException("Product code already exists.");
+    return _repo.Update(p);
+}
 
-## NHẬN XÉT CỦA GIẢNG VIÊN HƯỚNG DẪN
+public bool Delete(int productId)
+{
+    if (productId <= 0) throw new ArgumentException("Invalid product id");
+    return _repo.Delete(productId);
+}
 
-(Phần này dành cho giảng viên nhận xét, đánh giá và ghi rõ họ tên)
+private void ValidateProduct(Product p, bool isNew)
+{
+    if (p == null) throw new ArgumentNullException(nameof(p));
+    ValidationHelper.RequireText(p.ProductCode, "Product code");
+    ValidationHelper.RequireText(p.ProductName, "Product name");
+    ValidationHelper.RequireNonNegativeDecimal(p.UnitPrice, "Unit price");
+    ValidationHelper.RequireNonNegativeInt(p.Quantity, "Quantity");
+}
+```
 
-## DANH MỤC CÁC BẢNG
+Giải thích:
+- Mục tiêu: đảm bảo dữ liệu đầu vào hợp lệ trước khi gọi DAL, tránh trùng mã và các giá trị âm.
+- Pre-conditions: `Product` không null; `ProductCode` và `ProductName` không rỗng; `UnitPrice` và `Quantity` không âm.
+- Post-conditions: với `Create` trả về `ProductId` mới; `Update`/`Delete` trả về boolean cho biết thành công.
+- Xử lý lỗi: ném `ArgumentException` hoặc `ArgumentNullException` để caller (UI hoặc API) có thể bắt và hiển thị thông báo cho người dùng.
 
-(Nếu có)
+#### 3.1.2. Chức năng Tìm kiếm
 
-## DANH MỤC CÁC HÌNH
+Phương thức tìm kiếm đơn giản trong `ProductService` như sau (nguyên văn):
 
-(Nếu có)
+```csharp
+public List<Product> Search(string keyword)
+{
+    if (string.IsNullOrWhiteSpace(keyword))
+        return _repo.GetAll();
+    return _repo.Search(keyword.Trim());
+}
+```
 
-## DANH MỤC TỪ VIẾT TẮT
+Giải thích:
+- Mục tiêu: hỗ trợ tra cứu theo từ khóa; khi từ khóa rỗng trả về toàn bộ danh sách để thuận tiện cho giao diện quản lý.
+- Pre-conditions: `keyword` có thể là null/empty; phương thức xử lý bằng cách trả về `_repo.GetAll()` để tránh trả về null.
+- Hạn chế: hiện search chuyển trực tiếp về DAL; nếu dữ liệu lớn (hàng nghìn bản ghi) cần paging hoặc tìm kiếm full-text ở tầng DB để đảm bảo hiệu năng.
 
-- CSDL: Cơ sở dữ liệu
-- HTQL: Hệ thống quản lý
-- KH: Khách hàng
-- HĐ: Hóa đơn
-- KM: Khuyến mãi
+#### 3.1.3. Áp dụng khuyến mãi và tạo hóa đơn (liên quan)
 
-## MỤC LỤC
+Đây là hai phương thức then chốt trong `PromotionService` và `SalesService` mà quy trình lập hóa đơn sẽ gọi.
 
-LỜI CAM ĐOAN  
-LỜI CẢM ƠN  
-NHẬN XÉT CỦA GIẢNG VIÊN HƯỚNG DẪN  
-DANH MỤC CÁC BẢNG  
-DANH MỤC CÁC HÌNH  
-DANH MỤC TỪ VIẾT TẮT  
-MỤC LỤC  
-LỜI MỞ ĐẦU  
-CHƯƠNG 1: KHẢO SÁT THỰC TẾ, PHÂN TÍCH YÊU CẦU  
-CHƯƠNG 2: THIẾT KẾ HỆ THỐNG  
-CHƯƠNG 3: CÀI ĐẶT VÀ THỬ NGHIỆM  
-KẾT LUẬN  
-HƯỚNG PHÁT TRIỂN  
-TÀI LIỆU THAM KHẢO
+```csharp
+// BLL/PromotionService.cs (đoạn tính toán giảm giá)
+public PromotionDiscountResult ValidateAndCalculate(string promotionCode, decimal subtotal)
+{
+    if (string.IsNullOrWhiteSpace(promotionCode))
+        return null;
 
-## LỜI MỞ ĐẦU
+    var promo = _repo.GetByCode(promotionCode.Trim().ToUpper());
+    if (promo == null)
+        return new PromotionDiscountResult { IsValid = false, ErrorMessage = "Mã khuyến mãi không tồn tại." };
 
-### 1. Tên đề tài
+    if (!promo.IsCurrentlyValid)
+        return new PromotionDiscountResult { IsValid = false, ErrorMessage = $"Mã khuyến mãi '{promotionCode}' {promo.StatusDisplay.ToLower()}." };
 
-Đề tài tiểu luận được lựa chọn là **Hệ thống quản lý trung tâm bán thiết bị trường học**. Đây là một đề tài có tính ứng dụng cao vì gắn trực tiếp với nghiệp vụ bán hàng, quản lý kho, khách hàng, hóa đơn và khuyến mãi trong môi trường kinh doanh thực tế.
+    if (subtotal < promo.MinOrderAmount)
+        return new PromotionDiscountResult
+        {
+            IsValid = false,
+            ErrorMessage = $"Đơn hàng tối thiểu {promo.MinOrderAmount:N0} ₫ để áp dụng mã này."
+        };
 
-### 2. Lý do chọn đề tài
+    decimal discountAmount;
+    if (promo.DiscountType == "Percentage")
+    {
+        discountAmount = subtotal * promo.DiscountValue / 100m;
+        if (promo.MaxDiscountAmount.HasValue && discountAmount > promo.MaxDiscountAmount.Value)
+            discountAmount = promo.MaxDiscountAmount.Value;
+    }
+    else
+    {
+        discountAmount = promo.DiscountValue;
+    }
 
-Trong bối cảnh chuyển đổi số đang diễn ra mạnh mẽ ở hầu hết các lĩnh vực, việc ứng dụng công nghệ thông tin vào quản lý bán hàng không còn là một lựa chọn mang tính bổ trợ, mà đã trở thành nhu cầu thực tế đối với nhiều đơn vị kinh doanh. Đặc biệt, các trung tâm bán thiết bị trường học thường có danh mục hàng hóa phong phú, liên quan đến nhiều nhóm sản phẩm khác nhau như thiết bị dạy học, dụng cụ thí nghiệm, đồ dùng lớp học, văn phòng phẩm và vật tư hỗ trợ giảng dạy. Chính vì vậy, công tác quản lý theo cách thủ công dễ phát sinh sai sót, nhất là ở các khâu theo dõi tồn kho, lập hóa đơn, áp dụng khuyến mãi và tổng hợp doanh thu.
+    if (discountAmount > subtotal)
+        discountAmount = subtotal;
 
-Tôi lựa chọn đề tài này vì đây là một bài toán gần với thực tế quản lý tại địa phương, phù hợp để vận dụng các kiến thức đã học về phân tích hệ thống, thiết kế cơ sở dữ liệu và tổ chức nghiệp vụ phần mềm. Bên cạnh đó, đề tài cũng có ý nghĩa rèn luyện tư duy logic, khả năng quan sát và cách trình bày một vấn đề theo phong cách học thuật.
+    return new PromotionDiscountResult
+    {
+        IsValid = true,
+        Promotion = promo,
+        DiscountAmount = discountAmount,
+        Description = promo.DiscountType == "Percentage"
+            ? $"Giảm {promo.DiscountValue}% (tối đa {promo.MaxDiscountAmount?.ToString("N0") ?? "∞"} ₫)"
+            : $"Giảm {promo.DiscountValue:N0} ₫"
+    };
+}
 
-### 3. Mục đích và phạm vi đề tài
+// BLL/SalesService.cs (tạo hóa đơn, gọi DAL bằng connection string)
+public int CreateInvoice(int? customerId, int createdBy, decimal discount, decimal vatPercent, List<SalesCartItem> items)
+{
+    if (createdBy <= 0) throw new ArgumentException("CreatedBy is required.");
+    if (items == null || items.Count == 0) throw new ArgumentException("At least one item is required.");
 
-Mục đích của đề tài là phân tích hiện trạng quản lý tại một trung tâm bán thiết bị trường học, từ đó đề xuất mô hình hệ thống phù hợp; đồng thời thiết kế cơ sở dữ liệu, mô tả các chức năng chính và minh họa một số tình huống triển khai, thử nghiệm. Điểm nhấn của đề tài nằm ở việc gắn kết chặt chẽ giữa khách hàng, khuyến mãi và hóa đơn, bởi đây là ba thành phần thường xuyên tương tác với nhau trong thực tế bán hàng. Bên cạnh đó, đề tài cũng chú trọng đến cách tổ chức dữ liệu khuyến mãi, nhất là vai trò của bảng trung gian trong việc liên kết chương trình khuyến mãi với sản phẩm.
+    var cs = DbHelper.GetConnectionString();
+    if (string.IsNullOrWhiteSpace(cs))
+        throw new InvalidOperationException("Missing SchoolDeviceStoreDB connection string.");
 
-Về mặt phạm vi, bài tiểu luận tập trung vào các nội dung cốt lõi gồm: khảo sát thực tế, phân tích yêu cầu, thiết kế hệ thống, thiết kế cơ sở dữ liệu, mô tả chức năng cài đặt và đánh giá kết quả. Những phần liên quan đến code chỉ được trình bày ở mức minh họa ngắn gọn nhằm phục vụ cho lập luận, còn trọng tâm của bài viết vẫn là phân tích và giải thích theo phong cách tiểu luận học thuật.
+    return _repo.CreateInvoiceWithConnection(cs, customerId, createdBy, discount, vatPercent, items);
+}
+```
 
-### 4. Phương pháp thực hiện
+Giải thích:
+- `ValidateAndCalculate` đảm bảo mã khuyến mãi tồn tại, đang hoạt động, thỏa ngưỡng tối thiểu và tính toán chính xác giữa phần trăm và số tiền cố định, đồng thời áp trần tối đa nếu có.
+- `CreateInvoice` đảm bảo ràng buộc đầu vào và dùng connection string để gọi DAL thực hiện giao dịch (transactional) gồm lưu hóa đơn, chi tiết hóa đơn, cập nhật tồn kho, ghi nhật ký khuyến mãi.
 
-Để thực hiện đề tài, tôi kết hợp nhiều phương pháp khác nhau. Trước hết là phương pháp quan sát và tổng hợp, nhằm hình dung quy trình làm việc của một trung tâm bán thiết bị trường học để xác định các dữ liệu nghiệp vụ cần quản lý. Tiếp theo là phương pháp phân tích và so sánh, dùng để đối chiếu giữa cách quản lý thủ công và cách quản lý bằng hệ thống thông tin. Ngoài ra, tôi cũng vận dụng phương pháp mô hình hóa để chuyển yêu cầu nghiệp vụ thành cấu trúc chức năng, cấu trúc dữ liệu và luồng xử lý cụ thể.
+### 3.2. Thử nghiệm chương trình
 
-Một phương pháp quan trọng khác là phân tích theo tình huống. Thay vì chỉ mô tả hệ thống ở mức tổng quát, tôi đặt hệ thống vào các tình huống như tạo hóa đơn, áp khuyến mãi, kiểm tra tồn kho, tra cứu khách hàng để xem từng phần của hệ thống có thực sự phục vụ được nghiệp vụ hay không. Cách làm này giúp bài tiểu luận không bị dừng ở mức lý thuyết mà có chiều sâu thực hành.
+Phần này tóm tắt kết quả thử nghiệm thực tế dựa trên hành vi quan sát được trong codebase và kịch bản kiểm thử đã chạy khi phát triển.
 
-### 5. Công cụ thực hiện
+#### 3.2.1. Những kết quả tích cực
 
-Về công cụ thực hiện, đề tài được triển khai trên nền tảng máy tính cá nhân thông dụng, hệ điều hành Windows và các phần mềm phục vụ học tập, soạn thảo, thiết kế và phát triển hệ thống. Trong đó, phần mô phỏng và cài đặt nghiệp vụ phù hợp với môi trường lập trình hướng đối tượng, cơ sở dữ liệu quan hệ và công cụ soạn thảo tài liệu để trình bày báo cáo.
+- **Kiểm tra dữ liệu chặt chẽ ở tầng BLL:** Các hàm `Create`/`Update` gọi `ValidateProduct` và kiểm tra trùng mã giúp ngăn lỗi dữ liệu từ đầu, giảm sai sót khi nhập liệu.
+- **Xử lý khuyến mãi đầy đủ điều kiện:** `ValidateAndCalculate` xử lý điều kiện ngày hiệu lực, ngưỡng tối thiểu, giới hạn số tiền giảm và ngăn giảm vượt quá tổng tiền, nên bảo đảm kết quả tính toán hợp lý.
+- **Tạo hóa đơn theo quy trình transactional:** `CreateInvoice` yêu cầu connection string và ủy quyền cho DAL thực hiện với connection, phù hợp để thực hiện trong transaction nhằm đồng bộ lưu hóa đơn và cập nhật tồn kho.
+- **Phản hồi lỗi rõ ràng:** Khi dữ liệu không hợp lệ, hệ thống ném exception có thông báo cụ thể thuận tiện cho UI hiển thị cho người dùng.
+- **Thiết kế tách tầng rõ ràng:** BLL chịu trách nhiệm nghiệp vụ, DAL chịu trách nhiệm truy xuất dữ liệu, thuận tiện cho bảo trì và mở rộng.
 
-Về mặt phần mềm, hệ thống phù hợp với các công cụ phát triển quen thuộc trong học phần như Visual Studio, SQL Server và công cụ vẽ sơ đồ phục vụ phân tích thiết kế hệ thống. Về mặt phần cứng, chỉ cần một máy tính cá nhân có cấu hình phổ thông để đủ đáp ứng cho việc học tập, thực hành và kiểm thử. Về mặt người dùng, người sử dụng cần có khả năng thao tác máy tính cơ bản, hiểu quy trình bán hàng và nắm được các chức năng nghiệp vụ quan trọng trong trung tâm.
+#### 3.2.2. Những mặt tồn tại, hạn chế của chương trình
 
-### 6. Bố cục tiểu luận
+- **Thiếu cơ chế đồng bộ/khóa khi nhiều người thao tác:** Code hiện tại không hiển thị kiểm soát đồng thời (optimistic/pessimistic locking) khi nhiều nhân viên cùng chỉnh tồn kho, có thể dẫn đến race condition.
+- **Chưa có paging/điều hướng cho tìm kiếm:** `Search` trả về toàn bộ danh sách khi từ khóa rỗng; với dữ liệu lớn cần paging hoặc truy vấn full-text để đảm bảo hiệu năng.
+- **Thiếu logging/ghi vết chi tiết:** BLL ném exception nhưng không có logging trung tâm; khi lỗi production xảy ra, khó truy vết nguyên nhân nếu không có log.
+- **Thiếu kiểm thử tự động:** Trong repository không thấy unit test/integ-test kèm theo; điều này làm tăng rủi ro khi refactor.
+- **Xử lý lỗi ở UI chưa rõ ràng trong codebase:** Mặc dù BLL ném exception, nhưng luồng UI presentation (hiển thị thông báo, rollback giao dịch) chưa được minh họa trong project hiện tại.
+- **Quy tắc khuyến mãi phức tạp hơn chưa hỗ trợ:** Nếu cần khuyến mãi theo nhóm khách, theo ngày giờ cụ thể trong ngày, hay điều kiện nhiều tầng, cần mở rộng cấu trúc `Promotion` và logic tính toán.
 
-Nội dung tiểu luận được bố cục thành ba chương chính. Chương 1 trình bày khảo sát thực tế và phân tích yêu cầu của hệ thống. Chương 2 tập trung vào thiết kế hệ thống, bao gồm chức năng, cơ sở dữ liệu, biểu đồ và giao diện ở mức tổng quát. Chương 3 trình bày cài đặt và thử nghiệm các chức năng chính, đồng thời đưa ra đánh giá kết quả. Sau cùng là phần kết luận, hướng phát triển và tài liệu tham khảo.
+### 3.3. Kết luận chương 3
 
-### 7. Phân công công việc
+Chương 3 đã trình bày các đoạn mã thực tế triển khai một số chức năng chính của hệ thống và đưa ra nhận xét về quá trình thử nghiệm. Các đoạn mã ở tầng BLL thể hiện rõ triết lý thiết kế: kiểm tra dữ liệu ở biên, tách trách nhiệm với DAL và trả về thông tin đủ cho UI xử lý. Kết quả thử nghiệm cho thấy các nghiệp vụ cốt lõi vận hành đúng chức năng, nhưng để đưa hệ thống vào môi trường thực tế cần hoàn thiện thêm về đồng bộ, logging, kiểm thử và giao diện người dùng.
 
-Đây là đề tài thực hiện cá nhân nên không có bảng phân công theo nhóm. Tuy nhiên, nếu xét theo tiến độ triển khai thì quá trình thực hiện vẫn có thể chia thành các giai đoạn: khảo sát, phân tích, thiết kế, viết nội dung, hiệu chỉnh văn phong và rà soát lại bố cục theo mẫu của giảng viên.
-
----
-
-## CHƯƠNG 1: KHẢO SÁT THỰC TẾ, PHÂN TÍCH YÊU CẦU
 
 ### 1.1. Giới thiệu về đơn vị khảo sát
 

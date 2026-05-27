@@ -12,6 +12,8 @@ namespace GUI.WinForms
         private readonly Employee _currentUser;
         private readonly Dictionary<string, Button> _navButtons = new Dictionary<string, Button>();
         private readonly Dictionary<string, UserControl> _pageCache = new Dictionary<string, UserControl>();
+        private TableLayoutPanel _sidebarLayout;
+        private readonly Dictionary<string, int> _navRowIndices = new Dictionary<string, int>();
 
         private Panel _contentHost;
         private Label _pageTitleLabel;
@@ -79,6 +81,7 @@ namespace GUI.WinForms
                 RowCount = 15,
                 BackColor = Color.Transparent
             };
+            _sidebarLayout = layout;
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72F));  // Brand
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 12F));  // Separator
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));  // Dashboard
@@ -134,6 +137,7 @@ namespace GUI.WinForms
             backupButton.Click += (s, e) => LoadPage(GetBackupPage(), "Sao lưu / Khôi phục", "backup");
             layout.Controls.Add(backupButton, 0, 12);
             _navButtons["backup"] = backupButton;
+            _navRowIndices["backup"] = 12;
 
             var logoutButton = UIHelper.CreateSidebarDangerButton("  Thoát hệ thống", "\uE106");
             logoutButton.Name = "logout";
@@ -144,6 +148,8 @@ namespace GUI.WinForms
                     Close();
             };
             layout.Controls.Add(logoutButton, 0, 14);
+            _navButtons["logout"] = logoutButton;
+            _navRowIndices["logout"] = 14;
 
             // Apply role-based visibility using centralized permission check
             ApplyRolePermissions(roleId);
@@ -168,15 +174,31 @@ namespace GUI.WinForms
             SetNavVisibility("backup", EmployeeService.HasPermission(roleId, "backup"));
             // Products and Dashboard are visible to all roles
         }
-
+        
         private void SetNavVisibility(string key, bool visible)
         {
-            if (_navButtons.ContainsKey(key))
-            {
-                _navButtons[key].Visible = visible;
-            }
-        }
+            if (!_navButtons.ContainsKey(key))
+                return;
 
+            var btn = _navButtons[key];
+            // If layout mapping exists, collapse the row when hidden
+            if (_sidebarLayout != null && _navRowIndices.TryGetValue(key, out int row) && row >= 0 && row < _sidebarLayout.RowCount)
+            {
+                if (visible)
+                {
+                    _sidebarLayout.RowStyles[row].SizeType = SizeType.Absolute;
+                    _sidebarLayout.RowStyles[row].Height = btn.Height > 0 ? btn.Height : 44F;
+                }
+                else
+                {
+                    _sidebarLayout.RowStyles[row].SizeType = SizeType.Absolute;
+                    _sidebarLayout.RowStyles[row].Height = 0F;
+                }
+            }
+
+            btn.Visible = visible;
+        }
+        
         private void AddSidebarButton(TableLayoutPanel layout, int row, string key, string text, string iconChar, Action action)
         {
             var button = UIHelper.CreateSidebarButton(text, iconChar);
@@ -185,6 +207,7 @@ namespace GUI.WinForms
             button.Click += (s, e) => action();
             layout.Controls.Add(button, 0, row);
             _navButtons[key] = button;
+            _navRowIndices[key] = row;
         }
 
         private Control BuildShell()

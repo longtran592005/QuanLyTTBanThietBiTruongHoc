@@ -88,8 +88,8 @@ OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
             var parameters = new List<SQLiteParameter>
             {
                 new SQLiteParameter("@productId", (object)productId ?? DBNull.Value),
-                new SQLiteParameter("@from", (object)from?.ToString("yyyy-MM-dd HH:mm:ss") ?? DBNull.Value),
-                new SQLiteParameter("@to", (object)to?.ToString("yyyy-MM-dd HH:mm:ss") ?? DBNull.Value),
+                new SQLiteParameter("@from", (object)from ?? DBNull.Value) { DbType = System.Data.DbType.DateTime },
+                new SQLiteParameter("@to", (object)to ?? DBNull.Value) { DbType = System.Data.DbType.DateTime },
                 new SQLiteParameter("@limit", limit),
                 new SQLiteParameter("@offset", offset)
             };
@@ -122,8 +122,8 @@ WHERE (@productId IS NULL OR ProductId = @productId)
             var parameters = new List<SQLiteParameter>
             {
                 new SQLiteParameter("@productId", (object)productId ?? DBNull.Value),
-                new SQLiteParameter("@from", (object)from?.ToString("yyyy-MM-dd HH:mm:ss") ?? DBNull.Value),
-                new SQLiteParameter("@to", (object)to?.ToString("yyyy-MM-dd HH:mm:ss") ?? DBNull.Value)
+                new SQLiteParameter("@from", (object)from ?? DBNull.Value) { DbType = System.Data.DbType.DateTime },
+                new SQLiteParameter("@to", (object)to ?? DBNull.Value) { DbType = System.Data.DbType.DateTime }
             };
 
             var result = DAL.DbHelper.ExecuteScalar(sql, parameters.ToArray());

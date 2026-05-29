@@ -1,7 +1,6 @@
 using System;
-using System.Configuration;
 using System.IO;
-using System.Data.SqlClient;
+using DAL;
 
 namespace BLL
 {
@@ -10,12 +9,6 @@ namespace BLL
         public void BackupDatabase(string backupFilePath)
         {
             if (string.IsNullOrWhiteSpace(backupFilePath)) throw new ArgumentException("Backup file path is required.");
-
-            if (IsSqlServerConfigured())
-            {
-                BackupSqlServerDatabase(backupFilePath);
-                return;
-            }
 
             var databaseFilePath = GetDatabaseFilePath();
             if (!File.Exists(databaseFilePath))
@@ -33,12 +26,6 @@ namespace BLL
             if (string.IsNullOrWhiteSpace(backupFilePath)) throw new ArgumentException("Backup file path is required.");
             if (!File.Exists(backupFilePath)) throw new FileNotFoundException("Backup file not found.", backupFilePath);
 
-            if (IsSqlServerConfigured())
-            {
-                RestoreSqlServerDatabase(backupFilePath);
-                return;
-            }
-
             var databaseFilePath = GetDatabaseFilePath();
             var databaseDirectory = Path.GetDirectoryName(databaseFilePath);
             if (!string.IsNullOrWhiteSpace(databaseDirectory) && !Directory.Exists(databaseDirectory))
@@ -54,7 +41,7 @@ namespace BLL
 
         private static string GetDatabaseFilePath()
         {
-            var connectionString = ConfigurationManager.ConnectionStrings["SchoolDeviceStoreDB"]?.ConnectionString;
+            var connectionString = DbHelper.GetConnectionString();
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new InvalidOperationException("Missing SchoolDeviceStoreDB connection string.");
 
@@ -64,71 +51,16 @@ namespace BLL
                 if (item.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
                 {
                     var value = item.Substring("Data Source=".Length).Trim().Trim('"');
-                    var dataDirectory = AppDomain.CurrentDomain.GetData("DataDirectory") as string ?? AppDomain.CurrentDomain.BaseDirectory;
+                    var dataDirectory = AppDomain.CurrentDomain.GetData("DataDirectory") as string ?? RuntimePaths.GetDataDirectory();
                     value = value.Replace("|DataDirectory|", dataDirectory);
                     if (Path.IsPathRooted(value))
                         return value;
 
-                    return Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, value));
+                    return Path.GetFullPath(Path.Combine(dataDirectory, value));
                 }
             }
 
             throw new InvalidOperationException("Unable to determine SQLite database file path from connection string.");
-        }
-
-        private static bool IsSqlServerConfigured()
-        {
-            var provider = ConfigurationManager.ConnectionStrings["SchoolDeviceStoreDB"]?.ProviderName ?? string.Empty;
-            return provider.IndexOf("SqlClient", StringComparison.OrdinalIgnoreCase) >= 0;
-        }
-
-        private static void BackupSqlServerDatabase(string backupFilePath)
-        {
-            var cs = ConfigurationManager.ConnectionStrings["SchoolDeviceStoreDB"]?.ConnectionString;
-            if (string.IsNullOrWhiteSpace(cs))
-                throw new InvalidOperationException("Missing SQL Server connection string.");
-
-            var builder = new SqlConnectionStringBuilder(cs);
-            var databaseName = builder.InitialCatalog;
-            if (string.IsNullOrWhiteSpace(databaseName))
-                throw new InvalidOperationException("SQL Server connection string must include Initial Catalog.");
-
-            var backupDirectory = Path.GetDirectoryName(backupFilePath);
-            if (!string.IsNullOrWhiteSpace(backupDirectory) && !Directory.Exists(backupDirectory))
-                Directory.CreateDirectory(backupDirectory);
-
-            using (var conn = new SqlConnection(cs))
-            using (var cmd = conn.CreateCommand())
-            {
-                conn.Open();
-                cmd.CommandText = $"BACKUP DATABASE [{databaseName}] TO DISK = @path WITH INIT, COPY_ONLY";
-                cmd.Parameters.AddWithValue("@path", backupFilePath);
-                cmd.ExecuteNonQuery();
-            }
-        }
-
-        private static void RestoreSqlServerDatabase(string backupFilePath)
-        {
-            var cs = ConfigurationManager.ConnectionStrings["SchoolDeviceStoreDB"]?.ConnectionString;
-            if (string.IsNullOrWhiteSpace(cs))
-                throw new InvalidOperationException("Missing SQL Server connection string.");
-
-            var builder = new SqlConnectionStringBuilder(cs);
-            var databaseName = builder.InitialCatalog;
-            if (string.IsNullOrWhiteSpace(databaseName))
-                throw new InvalidOperationException("SQL Server connection string must include Initial Catalog.");
-
-            using (var conn = new SqlConnection(builder.ConnectionString.Replace($"Initial Catalog={databaseName}", "Initial Catalog=master")))
-            using (var cmd = conn.CreateCommand())
-            {
-                conn.Open();
-                cmd.CommandText = $@"
-ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-RESTORE DATABASE [{databaseName}] FROM DISK = @path WITH REPLACE;
-ALTER DATABASE [{databaseName}] SET MULTI_USER;";
-                cmd.Parameters.AddWithValue("@path", backupFilePath);
-                cmd.ExecuteNonQuery();
-            }
         }
     }
 }

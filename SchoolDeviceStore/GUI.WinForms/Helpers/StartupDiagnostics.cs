@@ -1,6 +1,5 @@
 using System;
 using System.Data.Common;
-using System.Data.SqlClient;
 using System.Data.SQLite;
 using System.Windows.Forms;
 using BLL;
@@ -34,17 +33,6 @@ namespace GUI.WinForms
 
                 AppLogger.Info("Database connectivity check passed.");
                 return true;
-            }
-            catch (SqlException sqlEx)
-            {
-                AppLogger.Error("SQL Server database connection failed", sqlEx);
-                UiDialogs.ShowError(
-                    "Unable to connect to the database.\n\n" +
-                    "The application could not establish a connection to the SQL Server database.\n\n" +
-                    "Error: " + sqlEx.Message + "\n\n" +
-                    "Please ensure the SQL Server instance and database are accessible.",
-                    "Database Connection Error");
-                return false;
             }
             catch (SQLiteException sqliteEx)
             {
@@ -98,15 +86,7 @@ namespace GUI.WinForms
 
         private static DbConnection CreateConnection(string connectionString)
         {
-            var provider = DbHelper.GetConnectionString();
-            var connStr = connectionString;
-            var providerName = System.Configuration.ConfigurationManager.ConnectionStrings["SchoolDeviceStoreDB"]?.ProviderName ?? string.Empty;
-            if (providerName.IndexOf("SqlClient", StringComparison.OrdinalIgnoreCase) >= 0 || connStr.IndexOf("Initial Catalog=", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                return new SqlConnection(connStr);
-            }
-
-            return new SQLiteConnection(connStr);
+            return new SQLiteConnection(connectionString);
         }
     }
 }

@@ -170,15 +170,6 @@ namespace SchoolDeviceStore.Tests
         {
             var setupService = new DatabaseSetupService();
             setupService.EnsureDemoDatabaseReady();
-            
-            var provider = ConfigurationManager.ConnectionStrings["SchoolDeviceStoreDB"]?.ProviderName ?? string.Empty;
-            if (provider.IndexOf("SqlClient", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                var dbName = Convert.ToString(DAL.DbHelper.ExecuteScalar("SELECT DB_NAME()"));
-                if (string.IsNullOrWhiteSpace(dbName))
-                    throw new Exception("Unable to query SQL Server database name");
-                return;
-            }
 
             var dbPath = GetDatabasePath();
             if (!File.Exists(dbPath))
@@ -336,8 +327,7 @@ namespace SchoolDeviceStore.Tests
             var backupService = new BackupService();
             var backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BackupTest");
             Directory.CreateDirectory(backupDir);
-            var provider = ConfigurationManager.ConnectionStrings["SchoolDeviceStoreDB"]?.ProviderName ?? string.Empty;
-            var backupPath = Path.Combine(backupDir, provider.IndexOf("SqlClient", StringComparison.OrdinalIgnoreCase) >= 0 ? "TestBackup.bak" : "TestBackup.db");
+            var backupPath = Path.Combine(backupDir, "TestBackup.db");
             
             try
             {

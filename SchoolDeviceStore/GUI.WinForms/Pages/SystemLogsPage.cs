@@ -11,7 +11,7 @@ namespace GUI.WinForms
         private readonly TextBox _logBox = new TextBox();
         private readonly Label _statusLabel = new Label();
 
-        private string LogFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", "application.log");
+        private string LogFilePath => AppLogger.CurrentLogFilePath;
 
         public SystemLogsPage()
         {
@@ -119,7 +119,7 @@ namespace GUI.WinForms
         {
             try
             {
-                var folder = Path.GetDirectoryName(LogFilePath);
+                var folder = AppLogger.CurrentLogDirectory;
                 if (!Directory.Exists(folder))
                 {
                     Directory.CreateDirectory(folder);

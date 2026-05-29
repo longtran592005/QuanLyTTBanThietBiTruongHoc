@@ -193,7 +193,7 @@ INSERT OR IGNORE INTO Settings (SettingKey, SettingValue) VALUES ('DefaultVAT', 
             var value = ConfigurationManager.AppSettings["SeedDemoDataOnStartup"];
             if (string.IsNullOrWhiteSpace(value))
             {
-                return false;
+                return true;
             }
 
             bool parsed;

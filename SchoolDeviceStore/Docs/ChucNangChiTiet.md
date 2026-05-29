@@ -13,7 +13,7 @@ Dưới đây là đặc tả chi tiết về mặt chức năng, kiến trúc k
 
 *   **Lớp Giao Diện (GUI - Presentation Layer):** Chịu trách nhiệm hiển thị dữ liệu và tiếp nhận phản hồi từ người dùng. Sử dụng các điều khiển tùy biến cao cấp (`UserControl`) để nạp động trang mà không gây nhấp nháy màn hình.
 *   **Lớp Nghiệp Vụ (BLL - Business Logic Layer):** Xử lý các quy tắc nghiệp vụ như kiểm tra tính hợp lệ của dữ liệu đầu vào, tính toán tiền thuế VAT, chiết khấu, kiểm tra hàng tồn kho trước khi tạo hóa đơn, xử lý mã hóa mật khẩu, và quản lý phân quyền RBAC.
-*   **Lớp Truy Xuất Dữ Liệu (DAL - Data Access Layer):** Thực hiện kết nối trực tiếp với cơ sở dữ liệu (SQLite cho chế độ chạy thử nghiệm offline và SQL Server cho môi trường Production). Sử dụng `DbHelper` với truy vấn tham số hóa (Parameterized Queries) ngăn chặn tuyệt đối lỗi bảo mật SQL Injection.
+*   **Lớp Truy Xuất Dữ Liệu (DAL - Data Access Layer):** Thực hiện kết nối trực tiếp với cơ sở dữ liệu SQLite. Sử dụng `DbHelper` với truy vấn tham số hóa (Parameterized Queries) ngăn chặn tuyệt đối lỗi bảo mật SQL Injection.
 *   **Lớp Đối Tượng Truyền Tải Dữ Liệu (DTO):** Chứa các lớp thực thể thuần túy ánh xạ trực tiếp 1-1 với cấu trúc bảng trong cơ sở dữ liệu (`Product`, `Category`, `Supplier`, `Employee`, `Promotion`, `SalesOrder`, `SalesOrderDetail`, `Role`).
 
 ---

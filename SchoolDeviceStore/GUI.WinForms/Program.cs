@@ -8,6 +8,18 @@ namespace GUI.WinForms
         [STAThread]
         static void Main()
         {
+            // Make the published folder portable: use the exe folder as |DataDirectory|
+            try
+            {
+                var exeFolder = Application.StartupPath;
+                AppDomain.CurrentDomain.SetData("DataDirectory", exeFolder);
+                AppLogger.Info($"DataDirectory set to: {exeFolder}");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.UnhandledException(ex, "Failed to set DataDirectory");
+            }
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);

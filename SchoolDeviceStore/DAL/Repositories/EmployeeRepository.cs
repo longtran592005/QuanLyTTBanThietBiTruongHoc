@@ -53,7 +53,7 @@ namespace DAL.Repositories
         {
             string sql = @"SELECT e.EmployeeId AS 'Mã NV', e.Username AS 'Tên đăng nhập', e.FullName AS 'Họ tên', 
                            e.Email, e.Phone AS 'SĐT', r.RoleName AS 'Vai trò', 
-                           CASE WHEN e.IsActive = 1 THEN N'Hoạt động' ELSE N'Đã khóa' END AS 'Trạng thái',
+                           CASE WHEN e.IsActive = 1 THEN 'Hoạt động' ELSE 'Đã khóa' END AS 'Trạng thái',
                            e.CreatedAt AS 'Ngày tạo'
                            FROM Employees e 
                            INNER JOIN Roles r ON r.RoleId = e.RoleId 

@@ -3,10 +3,14 @@
     <TargetFramework>net48</TargetFramework>
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
+    <PlatformTarget>x64</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <ApplicationIcon>app.ico</ApplicationIcon>
     <RootNamespace>GUI.WinForms</RootNamespace>
     <AssemblyName>SchoolDeviceStore.GUI</AssemblyName>
     <StartupObject>GUI.WinForms.Program</StartupObject>
     <LangVersion>latest</LangVersion>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Costura.Fody" Version="6.0.0" PrivateAssets="all" />
+    <PackageReference Include="Fody" Version="6.9.3" PrivateAssets="all" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Windows.Forms.DataVisualization" />
   </ItemGroup>
@@ -22,6 +28,19 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="costura-win-x86\SQLite.Interop.dll" />
+    <EmbeddedResource Include="costura-win-x64\SQLite.Interop.dll" />
+  </ItemGroup>
+
+  <Target Name="CopySQLiteNativeToOutput" AfterTargets="Build">
+    <ItemGroup>
+      <SQLiteX64 Include="$(ProjectDir)costura-win-x64\SQLite.Interop.dll" />
+    </ItemGroup>
+    <Message Text="Copying SQLite native (x64) to output: %(SQLiteX64.Identity) -> $(OutputPath)" Importance="High" Condition="Exists('%(SQLiteX64.Identity)')" />
+    <Copy SourceFiles="%(SQLiteX64.Identity)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('%(SQLiteX64.Identity)')" />
+  </Target>
 
   <ItemGroup>
     <None Update="Assets\**\*.*">

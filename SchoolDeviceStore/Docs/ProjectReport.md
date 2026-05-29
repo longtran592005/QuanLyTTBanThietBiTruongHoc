@@ -20,7 +20,7 @@ Build a desktop application for a school equipment sales center using C# WinForm
 - Category CRUD.
 - Supplier CRUD.
 - Sales invoice creation with cart and stock update.
-- SQL Server backup and restore.
+- SQLite backup and restore.
 
 ## 5. Database Summary
 - Roles, Employees

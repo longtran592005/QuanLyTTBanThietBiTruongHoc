@@ -171,8 +171,17 @@ namespace GUI.WinForms
 
         private void RefreshDashboard()
         {
-            var revenue = DbHelper.ExecuteScalar("SELECT ISNULL(SUM(TotalAmount),0) FROM SalesOrders WHERE OrderDate >= DATEADD(day,-30,GETDATE())");
-            var salesCount = DbHelper.ExecuteScalar("SELECT COUNT(1) FROM SalesOrders WHERE OrderDate >= DATEADD(day,-30,GETDATE())");
+            var isSqlite = DbHelper.IsSQLite();
+            var revenueSql = isSqlite 
+                ? "SELECT IFNULL(SUM(TotalAmount),0) FROM SalesOrders WHERE OrderDate >= date('now', '-30 days')"
+                : "SELECT ISNULL(SUM(TotalAmount),0) FROM SalesOrders WHERE OrderDate >= DATEADD(day,-30,GETDATE())";
+            var revenue = DbHelper.ExecuteScalar(revenueSql);
+
+            var salesCountSql = isSqlite
+                ? "SELECT COUNT(1) FROM SalesOrders WHERE OrderDate >= date('now', '-30 days')"
+                : "SELECT COUNT(1) FROM SalesOrders WHERE OrderDate >= DATEADD(day,-30,GETDATE())";
+            var salesCount = DbHelper.ExecuteScalar(salesCountSql);
+
             var productsCount = DbHelper.ExecuteScalar("SELECT COUNT(1) FROM Products");
             var lowStockCount = DbHelper.ExecuteScalar("SELECT COUNT(1) FROM Products WHERE Quantity <= 5");
 
@@ -189,7 +198,11 @@ namespace GUI.WinForms
                 revenueSeries.Points.AddXY(Convert.ToDateTime(row["ReportDate"]).ToString("dd/MM"), Convert.ToDecimal(row["Revenue"]));
             }
 
-            _lowStockGrid.DataSource = DbHelper.ExecuteQuery("SELECT TOP 10 ProductName, Quantity FROM Products WHERE Quantity <= 5 ORDER BY Quantity ASC, ProductName ASC");
+            var lowStockSql = isSqlite
+                ? "SELECT ProductName, Quantity FROM Products WHERE Quantity <= 5 ORDER BY Quantity ASC, ProductName ASC LIMIT 10"
+                : "SELECT TOP 10 ProductName, Quantity FROM Products WHERE Quantity <= 5 ORDER BY Quantity ASC, ProductName ASC";
+            _lowStockGrid.DataSource = DbHelper.ExecuteQuery(lowStockSql);
+
             if (_lowStockGrid.Columns.Count >= 2)
             {
                 _lowStockGrid.Columns["ProductName"].HeaderText = "Sản phẩm";
@@ -199,7 +212,10 @@ namespace GUI.WinForms
                 _lowStockGrid.Columns["Quantity"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             }
 
-            _recentInvoicesGrid.DataSource = DbHelper.ExecuteQuery("SELECT TOP 10 SalesOrderCode, OrderDate, TotalAmount FROM SalesOrders ORDER BY OrderDate DESC");
+            var recentInvoicesSql = isSqlite
+                ? "SELECT SalesOrderCode, OrderDate, TotalAmount FROM SalesOrders ORDER BY OrderDate DESC LIMIT 10"
+                : "SELECT TOP 10 SalesOrderCode, OrderDate, TotalAmount FROM SalesOrders ORDER BY OrderDate DESC";
+            _recentInvoicesGrid.DataSource = DbHelper.ExecuteQuery(recentInvoicesSql);
             if (_recentInvoicesGrid.Columns.Count >= 3)
             {
                 _recentInvoicesGrid.Columns["SalesOrderCode"].HeaderText = "Mã hóa đơn";

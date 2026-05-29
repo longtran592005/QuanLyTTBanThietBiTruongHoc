@@ -7,6 +7,20 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.118" />
+  </ItemGroup>
+
+  <Target Name="CopySQLiteNative" AfterTargets="Build;Publish">
+    <ItemGroup>
+      <_SQLiteFiles Include="$(OutputPath)**\SQLite.Interop.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_SQLiteFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(_SQLiteFiles)' != ''" />
+  </Target>
 
 </Project>

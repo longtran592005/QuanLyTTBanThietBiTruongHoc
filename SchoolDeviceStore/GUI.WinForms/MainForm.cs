@@ -34,11 +34,11 @@ namespace GUI.WinForms
             Text = "Quản lý thiết bị trường học";
             StartPosition = FormStartPosition.CenterScreen;
             WindowState = FormWindowState.Maximized;
-            MinimumSize = new Size(1280, 800);
+            MinimumSize = new Size(1024, 720); // Reduced to prevent blank screen on 1366x768 monitors
             BackColor = UITheme.BackgroundColor;
             Font = UITheme.BaseFont;
             DoubleBuffered = true;
-            ControlBox = false; // Disable title bar buttons (close, min, max) as requested
+            ControlBox = true; // Keep ControlBox true to avoid DWM clipping bugs when maximized, although it will show min/max/close buttons. Alternatively FormBorderStyle = None.
 
             var root = new TableLayoutPanel
             {

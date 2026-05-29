@@ -11,15 +11,15 @@ namespace BLL
     {
         public DataTable GetRevenueByDay(DateTime fromDate, DateTime toDate)
         {
-            string sql = @"SELECT CONVERT(date, OrderDate) AS ReportDate,
+            string sql = @"SELECT date(OrderDate) AS ReportDate,
 SUM(TotalAmount) AS Revenue,
 SUM(SubTotal) AS SubTotal,
 SUM(Discount) AS Discount,
 SUM(VAT) AS VAT,
 COUNT(1) AS OrderCount
 FROM SalesOrders
-WHERE CONVERT(date, OrderDate) >= CONVERT(date, @fromDate) AND CONVERT(date, OrderDate) < DATEADD(day, 1, CONVERT(date, @toDate))
-GROUP BY CONVERT(date, OrderDate)
+WHERE date(OrderDate) >= date(@fromDate) AND date(OrderDate) < date(@toDate, '+1 day')
+GROUP BY date(OrderDate)
 ORDER BY ReportDate";
             return DAL.DbHelper.ExecuteQuery(sql,
                 new SQLiteParameter("@fromDate", fromDate.Date),
@@ -32,7 +32,7 @@ ORDER BY ReportDate";
         public DataTable GetRevenueByDayFiltered(DateTime fromDate, DateTime toDate, 
             int? categoryId = null, int? supplierId = null, int? employeeId = null)
         {
-            string sql = @"SELECT CONVERT(date, s.OrderDate) AS ReportDate,
+            string sql = @"SELECT date(s.OrderDate) AS ReportDate,
 SUM(s.TotalAmount) AS Revenue,
 SUM(s.SubTotal) AS SubTotal,
 SUM(s.Discount) AS Discount,
@@ -49,7 +49,7 @@ INNER JOIN Products p ON p.ProductId = d.ProductId";
             }
 
             sql += @"
-WHERE CONVERT(date, s.OrderDate) >= CONVERT(date, @fromDate) AND CONVERT(date, s.OrderDate) < DATEADD(day, 1, CONVERT(date, @toDate))";
+WHERE date(s.OrderDate) >= date(@fromDate) AND date(s.OrderDate) < date(@toDate, '+1 day')";
 
             if (categoryId.HasValue)
                 sql += " AND p.CategoryId = @categoryId";
@@ -58,7 +58,7 @@ WHERE CONVERT(date, s.OrderDate) >= CONVERT(date, @fromDate) AND CONVERT(date, s
             if (employeeId.HasValue)
                 sql += " AND s.CreatedBy = @employeeId";
 
-            sql += " GROUP BY CONVERT(date, s.OrderDate) ORDER BY ReportDate";
+            sql += " GROUP BY date(s.OrderDate) ORDER BY ReportDate";
 
             var parameters = new System.Collections.Generic.List<SQLiteParameter>
             {
@@ -74,14 +74,15 @@ WHERE CONVERT(date, s.OrderDate) >= CONVERT(date, @fromDate) AND CONVERT(date, s
 
         public DataTable GetTopProducts(DateTime fromDate, DateTime toDate)
         {
-            string sql = @"SELECT TOP 10 p.ProductCode, p.ProductName, SUM(d.Quantity) AS SoldQuantity,
+            string sql = @"SELECT p.ProductCode, p.ProductName, SUM(d.Quantity) AS SoldQuantity,
 SUM(d.Quantity * d.UnitPrice) AS SalesAmount
 FROM SalesOrderDetails d
 INNER JOIN SalesOrders s ON s.SalesOrderId = d.SalesOrderId
 INNER JOIN Products p ON p.ProductId = d.ProductId
-WHERE CONVERT(date, s.OrderDate) >= CONVERT(date, @fromDate) AND CONVERT(date, s.OrderDate) < DATEADD(day, 1, CONVERT(date, @toDate))
+WHERE date(s.OrderDate) >= date(@fromDate) AND date(s.OrderDate) < date(@toDate, '+1 day')
 GROUP BY p.ProductCode, p.ProductName
-ORDER BY SoldQuantity DESC";
+ORDER BY SoldQuantity DESC
+LIMIT 10";
             return DAL.DbHelper.ExecuteQuery(sql,
                 new SQLiteParameter("@fromDate", fromDate.Date),
                 new SQLiteParameter("@toDate", toDate.Date));
@@ -97,7 +98,7 @@ FROM SalesOrderDetails d
 INNER JOIN SalesOrders s ON s.SalesOrderId = d.SalesOrderId
 INNER JOIN Products p ON p.ProductId = d.ProductId
 LEFT JOIN Categories c ON c.CategoryId = p.CategoryId
-WHERE CONVERT(date, s.OrderDate) >= CONVERT(date, @fromDate) AND CONVERT(date, s.OrderDate) < DATEADD(day, 1, CONVERT(date, @toDate))
+WHERE date(s.OrderDate) >= date(@fromDate) AND date(s.OrderDate) < date(@toDate, '+1 day')
 GROUP BY c.CategoryName
 ORDER BY Revenue DESC";
             return DAL.DbHelper.ExecuteQuery(sql,
@@ -110,11 +111,11 @@ ORDER BY Revenue DESC";
         /// </summary>
         public ReportKpiData GetKpis(DateTime fromDate, DateTime toDate)
         {
-            string sql = @"SELECT ISNULL(SUM(TotalAmount), 0) AS TotalRevenue, 
+            string sql = @"SELECT IFNULL(SUM(TotalAmount), 0) AS TotalRevenue, 
                            COUNT(1) AS OrderCount,
-                           ISNULL(AVG(TotalAmount), 0) AS AvgOrderValue
+                           IFNULL(AVG(TotalAmount), 0) AS AvgOrderValue
                            FROM SalesOrders 
-                           WHERE CONVERT(date, OrderDate) >= CONVERT(date, @fromDate) AND CONVERT(date, OrderDate) < DATEADD(day, 1, CONVERT(date, @toDate))";
+                           WHERE date(OrderDate) >= date(@fromDate) AND date(OrderDate) < date(@toDate, '+1 day')";
             var dt = DAL.DbHelper.ExecuteQuery(sql,
                 new SQLiteParameter("@fromDate", fromDate.Date),
                 new SQLiteParameter("@toDate", toDate.Date));
@@ -155,7 +156,7 @@ ORDER BY Revenue DESC";
                            Quantity AS CurrentValue, 'Cần nhập thêm ngay' AS Detail
                            FROM Products WHERE Quantity = 0
                            ORDER BY CurrentValue ASC
-                           OFFSET 0 ROWS FETCH NEXT 15 ROWS ONLY";
+                           LIMIT 15";
             return DAL.DbHelper.ExecuteQuery(sql);
         }
 

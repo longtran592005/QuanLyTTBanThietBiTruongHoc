@@ -2,14 +2,18 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using DAL;
 
 namespace GUI.WinForms
 {
     public static class AppLogger
     {
         private static readonly object SyncRoot = new object();
-        private static readonly string LogDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
+        private static readonly string LogDirectory = RuntimePaths.GetLogsDirectory();
         private static readonly string LogFilePath = Path.Combine(LogDirectory, "application.log");
+
+        public static string CurrentLogFilePath => LogFilePath;
+        public static string CurrentLogDirectory => LogDirectory;
 
         public static void Info(string message)
         {
